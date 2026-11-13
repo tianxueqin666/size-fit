@@ -387,6 +387,11 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
   .drawer .phead{padding-top:16px}
   .notebook{padding:28px 16px 24px}
   .nb-head .h1{font-size:30px}
+  /* phones: only the app shows and the page can't scroll; add #guide to the link to show the test guide below it */
+  html:not(.show-guide) .notebook{display:none}
+  html:not(.show-guide),html:not(.show-guide) body{height:100%;overflow:hidden;overscroll-behavior:none}
+  /* 16px stops iPhone Safari from zooming in when a field is tapped */
+  .field input,.field select,textarea{font-size:16px}
 }
 
 /* in-app light/dark switch: overrides the tokens inside the phone screen only */
@@ -520,6 +525,9 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 (() => {
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
+// the test guide shows on phones only when the link ends in #guide
+const guideMode = () => document.documentElement.classList.toggle("show-guide", location.hash==="#guide");
+guideMode(); addEventListener("hashchange", guideMode);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 /* ---------- garments ---------- */
