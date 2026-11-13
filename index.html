@@ -4,7 +4,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-  
 /* Layout: the phone sits alone at the top of the page so testers focus on it; the tester's notebook (tasks, results, notes) is below it. */
 :root{
   --page:#EEEBF3; --phone:#16121F; --screen:#FFFFFF; --sunk:#F5F3F8; --ink:#1B1530; --muted:#6A6378; --line:#E3DEEA; --fig-line:#3D3549; --fig-op:.34;
@@ -378,10 +377,15 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
   .stage{gap:36px}
 }
 @media (max-width:440px){
-  body{padding-block:8px}
-  .phone{width:100%;height:min(800px,calc(100dvh - 16px));padding:6px;border-radius:34px}
-  .screen{border-radius:28px}
-  .statusbar .notch{width:84px}
+  /* on a real phone the prototype fills the whole screen: no phone frame, no pretend status bar */
+  body{padding:0}
+  .stage{gap:0}
+  .phone{width:100%;height:100vh;height:100dvh;padding:0;border-radius:0;background:none;box-shadow:none}
+  .screen{border-radius:0}
+  .statusbar{display:none}
+  .view{padding-top:16px}
+  .drawer .phead{padding-top:16px}
+  .notebook{padding:28px 16px 24px}
   .nb-head .h1{font-size:30px}
 }
 
