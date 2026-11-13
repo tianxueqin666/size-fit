@@ -1,0 +1,1531 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Size &amp; Fit App Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the phone sits alone at the top of the page so testers focus on it; the tester's notebook (tasks, results, notes) is below it. */
+:root{
+  --page:#EEEBF3; --phone:#16121F; --screen:#FFFFFF; --sunk:#F5F3F8; --ink:#1B1530; --muted:#6A6378; --line:#E3DEEA; --fig-line:#3D3549; --fig-op:.34;
+  --accent:#D9338A; --accent-soft:#FCE4F0; --on-accent:#FFFFFF;
+  --tape:#F4C33F; --tape-ink:#3A2C00; --blue:#2F6FE0; --blue-soft:#E3ECFC;
+  --good:#1B8A4F; --good-soft:#E0F4E8; --warn:#A86200; --warn-soft:#FFF0D6; --bad:#C23A3A; --bad-soft:#FBE4E4;
+  --shadow:0 30px 60px -30px rgba(27,21,48,.45);
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0F0D14; --phone:#000000; --screen:#1B1824; --sunk:#24202F; --ink:#EEEAF6; --muted:#A39CB2; --line:#353042; --fig-line:#CBC3D9; --fig-op:.46;
+  --accent:#FF6CB4; --accent-soft:#3A1D2D; --on-accent:#1B0B14;
+  --tape:#E9B935; --tape-ink:#2A2000; --blue:#7AA8FF; --blue-soft:#1E2A44;
+  --good:#5BD08F; --good-soft:#163024; --warn:#F2AE4B; --warn-soft:#3A2A12; --bad:#FF8484; --bad-soft:#3D1C1F;
+  --shadow:0 30px 60px -30px rgba(0,0,0,.8); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#0F0D14; --phone:#000000; --screen:#1B1824; --sunk:#24202F; --ink:#EEEAF6; --muted:#A39CB2; --line:#353042; --fig-line:#CBC3D9; --fig-op:.46;
+  --accent:#FF6CB4; --accent-soft:#3A1D2D; --on-accent:#1B0B14;
+  --tape:#E9B935; --tape-ink:#2A2000; --blue:#7AA8FF; --blue-soft:#1E2A44;
+  --good:#5BD08F; --good-soft:#163024; --warn:#F2AE4B; --warn-soft:#3A2A12; --bad:#FF8484; --bad-soft:#3D1C1F;
+  --shadow:0 30px 60px -30px rgba(0,0,0,.8); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage{display:flex;flex-direction:column;align-items:center;gap:64px;max-width:1120px;margin:0 auto}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* ---------- phone ---------- */
+.phone{flex:0 0 auto;width:390px;height:800px;height:clamp(560px,calc(100dvh - 48px),800px);background:var(--phone);border-radius:52px;padding:12px;box-shadow:var(--shadow);position:relative}
+[hidden]{display:none!important}
+.screen{position:relative;height:100%;background:var(--screen);color:var(--ink);border-radius:41px;overflow:hidden;display:flex;flex-direction:column}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px 6px;font-size:13px;font-weight:600;flex:0 0 auto}
+.statusbar .notch{width:110px;height:26px;background:var(--phone);border-radius:20px}
+.view{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:8px 20px 20px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
+.view::-webkit-scrollbar{display:none}
+.view.has-tabs{padding-bottom:12px}
+/* setup screens: main button and Skip sit on a layer that stays put while the screen scrolls under it */
+.dock{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;flex-direction:column;gap:6px;padding:12px 20px 20px;
+  background:var(--screen);background:color-mix(in srgb,var(--screen) 85%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);
+  border-top:1px solid var(--line);box-shadow:0 -12px 24px -20px rgba(0,0,0,.45)}
+.dock .skip{padding:6px;font-size:14.5px}
+.tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);padding:8px 8px 20px;background:var(--screen)}
+.tabbar button{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);padding:6px 0;border-radius:12px}
+.tabbar button[aria-current="true"]{color:var(--accent)}
+.tabbar svg{width:24px;height:24px}
+
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.h1{font-size:28px;line-height:1.08;font-weight:800}
+.h2{font-size:21px;line-height:1.15;font-weight:700}
+.h3{font-size:16px;font-weight:700}
+p{margin:0}
+.sub{color:var(--muted);font-size:14.5px}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.spacer{flex:1}
+
+.btn{border:0;border-radius:16px;padding:14px 18px;font-weight:700;font-size:15.5px;background:var(--ink);color:var(--screen);width:100%;display:flex;justify-content:center;align-items:center;gap:8px}
+.btn.accent{background:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.link{background:none;color:var(--muted);padding:8px;font-weight:600;font-size:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.small{width:auto;padding:9px 14px;font-size:14px;border-radius:12px}
+.back{background:none;border:0;padding:6px 8px 6px 0;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:4px;font-size:14px}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.flabel{font-size:13px;font-weight:600;color:var(--muted)}
+.field input,.field select{border:1.5px solid var(--line);background:var(--sunk);border-radius:14px;padding:12px 14px;width:100%;min-width:0}
+.field input:focus,.field select:focus{border-color:var(--accent);outline:none}
+.field select.empty{color:var(--muted)}
+.field select option{color:var(--ink)}
+.unit{position:relative}
+.unit input{padding-right:46px}
+.unit span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--f-mono);font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.tag.blue{background:var(--blue-soft);color:var(--blue)}
+.tag.pink{background:var(--accent-soft);color:var(--accent)}
+.tag.good{background:var(--good-soft);color:var(--good)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--screen);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.card{background:var(--sunk);border-radius:20px;padding:16px}
+.card.line{background:var(--screen);border:1.5px solid var(--line)}
+.tip{background:var(--blue-soft);color:var(--ink);border-radius:16px;padding:12px 14px;font-size:13.5px;display:flex;gap:10px}
+.tip b{color:var(--blue)}
+.title-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px}
+.why-btn{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:999px;padding:5px 11px 5px 7px;background:var(--blue-soft);color:var(--blue);font-weight:700;font-size:13px;line-height:1}
+.why-btn svg{width:16px;height:16px}
+/* All set: a milestone moment */
+.milestone{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
+.badge-wrap{position:relative;width:170px;height:124px;display:grid;place-items:center}
+.badge{position:relative;width:88px;height:88px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;box-shadow:0 0 0 10px var(--accent-soft),0 20px 40px -18px var(--accent);animation:badgepop .55s cubic-bezier(.2,1.5,.4,1) both}
+.badge svg{width:46px;height:46px}
+.confetti{position:absolute;inset:0;width:100%;height:100%;animation:confetti .7s .1s ease-out both}
+@keyframes badgepop{from{transform:scale(.3);opacity:0}}
+@keyframes confetti{from{opacity:0;transform:scale(.85)}}
+.milestone .h1{font-size:30px;margin-top:6px}
+.milestone .done{font-size:19px;font-weight:600}
+.milestone .h1{text-wrap:balance}
+/* profile created (the group's version 4): progress bar, a centred greeting, the tape and the next step, spread evenly down the screen */
+.spread{flex:1 0 auto;display:flex;flex-direction:column;justify-content:space-evenly;gap:20px}
+.hello{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.hello .h1{font-size:36px}
+.hello p,.next-sub{font-size:22px;font-weight:600;line-height:1.3}
+.next{display:flex;flex-direction:column;gap:16px;text-align:center}
+.next-title{font-family:var(--f-display);font-size:24px;font-weight:800;line-height:1.12;letter-spacing:-.01em}
+.hello .h1,.next-title,.next-sub{text-wrap:balance}
+/* a few questions: body shape cards you swipe through (no scroll bar), then build and fit as three cards each */
+.q-sec{display:flex;flex-direction:column;gap:8px}
+.q-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.q-sec b.q-lab{font-size:14.5px}
+.swipe-hint{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);transition:opacity .3s}
+.swipe-hint svg{width:15px;height:15px;color:var(--accent);animation:hint 1.6s ease-in-out infinite}
+.swipe-hint.gone{opacity:0}
+@keyframes hint{0%,60%,100%{transform:translateX(0)}30%{transform:translateX(5px)}}
+.hrow{position:relative;display:flex;gap:10px;margin:0 -20px;padding:2px 20px 4px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:20px;scrollbar-width:none;overscroll-behavior-x:contain;user-select:none;-webkit-user-select:none}
+.hrow::-webkit-scrollbar{display:none}
+.hrow.free{scroll-snap-type:none}
+@media (pointer:fine){.hrow{cursor:grab}.hrow.free{cursor:grabbing}}
+.pcard,.scard{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--sunk);border:2px solid transparent;border-radius:16px;padding:8px 6px 10px;color:var(--ink);font:600 13px/1.2 var(--f-body);text-align:center}
+.pcard{flex:0 0 calc((100% - 10px) / 3.5);scroll-snap-align:start}
+.pcard{min-width:0}
+.pcard .fig{width:100%;height:auto;max-height:136px}
+.sq3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pcard > span{margin-top:auto}
+.scard{justify-content:center;min-height:60px;padding:10px 18px;font-size:13.5px}
+.scard .tick{top:5px;right:5px;width:16px;height:16px}
+.pcard[aria-pressed="true"],.scard[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.tick{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:none;place-items:center}
+.tick svg{width:11px;height:11px}
+[aria-pressed="true"] > .tick{display:grid}
+/* body shape figures: line drawings like a fashion figure-type chart, with the shape laid over in pink */
+.fig{display:block}
+.fig .paper{fill:var(--screen)}
+.fig .line,.fig .fine path,.fig .faint path{fill:none;stroke:var(--fig-line);stroke-linecap:round;stroke-linejoin:round}
+.fig .paper.line{fill:var(--screen)}
+.fig .line{stroke-width:1} .fig .fine path{stroke-width:.7} .fig .faint path{stroke-width:.55;stroke-opacity:.7}
+.fig .shape{fill:var(--accent);fill-opacity:var(--fig-op)}
+[aria-pressed="true"] .fig .shape{fill-opacity:calc(var(--fig-op) + .12)}
+/* all set: the last milestone before the app opens */
+.inside{display:flex;flex-direction:column;gap:8px}
+.inside > div{display:flex;align-items:center;gap:12px;background:var(--sunk);border-radius:16px;padding:10px 12px}
+.inside .si{flex:0 0 36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.inside .si svg{width:19px;height:19px}
+.inside b{display:block;font-size:15px}
+.inside span span{font-size:13.5px;color:var(--muted)}
+
+/* tape measure: the profile accuracy bar */
+.tape{position:relative;height:30px;border-radius:6px;background:var(--sunk);overflow:hidden;border:1px solid var(--line)}
+.tape .fill{position:absolute;inset:0 auto 0 0;background:var(--tape);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.tape .ticks{position:absolute;inset:0;background:
+  repeating-linear-gradient(90deg,transparent 0 calc(10% - 1.5px),color-mix(in srgb,var(--ink) 55%,transparent) calc(10% - 1.5px) 10%) bottom/100% 12px no-repeat,
+  repeating-linear-gradient(90deg,transparent 0 calc(2% - 1px),color-mix(in srgb,var(--ink) 30%,transparent) calc(2% - 1px) 2%) bottom/100% 6px no-repeat}
+.tape .tn{position:absolute;top:3px;font-family:var(--f-mono);font-size:9px;line-height:1;font-weight:600;color:color-mix(in srgb,var(--ink) 70%,transparent)}
+.tape .tn.l{left:6px} .tape .tn.r{right:6px}
+.tape .tn.on{color:var(--tape-ink)}
+.tape-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+.tape-row b{color:var(--ink);font-family:var(--f-mono)}
+
+.stepper{display:flex;gap:5px}
+.stepper i{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.stepper i.on{background:var(--accent)}
+
+.method{display:flex;gap:14px;align-items:center;text-align:left;width:100%;border:1.5px solid var(--line);background:var(--screen);border-radius:18px;padding:14px}
+.method[aria-pressed="true"]{border-color:var(--ink)}
+.method .ic{flex:0 0 44px;height:44px;border-radius:14px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.method .ic svg{width:22px;height:22px}
+.method b{display:block;font-size:15px}
+.method span{font-size:13px;color:var(--muted)}
+.sample{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:var(--sunk);border-radius:14px;padding:10px 12px}
+.sample .thumb{flex:0 0 44px;height:44px;border-radius:10px;background:var(--screen);display:grid;place-items:center}
+.sample .thumb svg{width:34px;height:34px}
+.sample b{display:block;font-size:14px}
+.sample span{font-size:12.5px;color:var(--muted);word-break:break-all}
+.blurred svg{filter:blur(2.2px)}
+
+.proc{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.proc li{list-style:none;display:flex;gap:12px;align-items:center;font-weight:600;color:var(--muted)}
+.proc ul{margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.proc .dot{flex:0 0 26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:13px}
+.proc li.done{color:var(--ink)} .proc li.done .dot{background:var(--blue);border-color:var(--blue);color:var(--screen)}
+.proc li.now{color:var(--ink)} .proc li.now .dot{border-color:var(--blue);border-top-color:transparent;animation:spin .8s linear infinite}
+.proc li.fail .dot{background:var(--bad);border-color:var(--bad);color:var(--screen)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.item-head{display:flex;gap:14px;align-items:center}
+.item-img{flex:0 0 76px;height:76px;border-radius:18px;background:var(--sunk);display:grid;place-items:center}
+.item-img svg{width:58px;height:58px}
+.sizes{display:flex;flex-direction:column;gap:10px}
+.size{border-radius:16px;border:1.5px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.size.best{border-color:var(--good);background:var(--good-soft);padding:16px}
+.size .top{display:flex;justify-content:space-between;align-items:baseline}
+.size .nm{font-family:var(--f-display);font-weight:700;font-size:17px}
+.size.best .nm{font-size:26px}
+.size .pc{font-family:var(--f-mono);font-weight:600}
+.size.best .pc{font-size:20px;color:var(--good)}
+.bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--muted);border-radius:6px;transition:width .4s}
+.size.best .bar i{background:var(--good)}
+.why{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.tune-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600}
+
+.err-ic{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:var(--warn-soft);color:var(--warn)}
+.err-ic svg{width:32px;height:32px}
+
+.toast{position:absolute;left:16px;right:16px;bottom:96px;background:var(--ink);color:var(--screen);padding:12px 16px;border-radius:14px;font-size:14px;font-weight:600;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;z-index:20}
+.toast.show{opacity:1;transform:none}
+.sheet-bg{position:absolute;inset:0;background:rgba(10,8,16,.45);z-index:10;display:flex;align-items:flex-end}
+.sheet{background:var(--screen);width:100%;border-radius:28px 28px 0 0;padding:20px 20px 28px;display:flex;flex-direction:column;gap:14px;max-height:85%;overflow:auto}
+.grab{width:40px;height:5px;border-radius:5px;background:var(--line);align-self:center}
+.sheet{scrollbar-width:none}
+.sheet::-webkit-scrollbar{display:none}
+/* scroll side bar: an always-visible bar on the right of anything in the phone that scrolls, so it's clear there is more to see */
+.vrail{position:absolute;right:4px;width:6px;border-radius:3px;background:var(--line);background:color-mix(in srgb,var(--ink) 14%,transparent);z-index:6;pointer-events:none}
+.vrail b{display:block;width:100%;min-height:28px;border-radius:3px;background:var(--muted);background:color-mix(in srgb,var(--ink) 58%,transparent)}
+
+/* external shop app mock */
+.ext{background:var(--sunk);border-radius:20px;overflow:hidden}
+.ext .bar-top{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-weight:800;font-family:var(--f-display);letter-spacing:.02em}
+.ext .hero{height:220px;display:grid;place-items:center;background:var(--screen)}
+.ext .hero svg{width:150px;height:150px}
+.share-row{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px}
+.share-app{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;background:none;border:0;width:68px}
+.share-app i{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-style:normal;font-weight:800;background:var(--sunk);color:var(--muted)}
+.share-app.us i{background:var(--accent);color:var(--on-accent)}
+
+/* fitting room */
+.rail{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.garm{flex:0 0 92px;border:1.5px solid var(--line);background:var(--screen);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.garm[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.garm svg{width:56px;height:56px}
+.garm small{font-size:11.5px;line-height:1.2;text-align:center;color:var(--muted)}
+.garm .more{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:8px;border:0;background:var(--sunk);font-weight:800;line-height:1;color:var(--muted)}
+.outfit-stage{background:var(--sunk);border-radius:22px;min-height:250px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:6px;place-items:center;padding:14px;position:relative}
+.outfit-stage .slot{width:100%;min-height:104px;border:1.5px dashed var(--line);border-radius:16px;display:grid;place-items:center;text-align:center;font-size:12px;color:var(--muted);padding:6px}
+.outfit-stage .slot.full{border-style:solid;border-color:transparent;background:var(--screen);animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+.outfit-stage .slot svg{width:70px;height:70px}
+@keyframes pop{from{transform:scale(.7);opacity:0}}
+
+/* styles */
+.feed{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.post{border:0;padding:0;background:none;text-align:left;display:flex;flex-direction:column;gap:6px}
+.post .pic{aspect-ratio:3/4;max-width:100%;border-radius:18px;display:grid;place-items:center;position:relative;overflow:hidden}
+.post .pic svg{width:60%}
+.post b{font-size:13.5px}
+.post span{font-size:12px;color:var(--muted)}
+.look-item{display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:12px}
+.look-item:last-child{border-bottom:0}
+.look-item .thumb{flex:0 0 52px;height:52px;border-radius:12px;background:var(--sunk);display:grid;place-items:center}
+.look-item .thumb svg{width:40px;height:40px}
+.look-item .meta{flex:1;min-width:0;font-size:13px;color:var(--muted)}
+.look-item .meta b{display:block;color:var(--ink);font-size:14px}
+.yoursize{border:0;background:var(--good-soft);color:var(--good);font-weight:700;font-size:12.5px;padding:7px 10px;border-radius:10px;white-space:nowrap}
+
+.menu-btn{position:relative;flex:0 0 auto;width:40px;height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--screen);display:grid;place-items:center;color:var(--ink);padding:0}
+.menu-btn svg{width:22px;height:22px}
+.menu-btn .dot{position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--tape);box-shadow:0 0 0 2px var(--screen)}
+/* hamburger menu: a drawer over the app, sliding in from the right where its button is */
+.statusbar{position:relative;z-index:13}
+.drawer{position:absolute;inset:0;z-index:12;display:flex;justify-content:flex-end}
+.drawer .scrim{position:absolute;inset:0;border:0;padding:0;background:rgba(10,8,16,.45);animation:fade .2s ease-out}
+.drawer .panel{position:relative;width:86%;max-width:340px;height:100%;background:var(--screen);display:flex;flex-direction:column;box-shadow:-24px 0 48px -24px rgba(0,0,0,.55);animation:slidein .28s cubic-bezier(.2,.8,.2,1)}
+.drawer .phead{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:52px 16px 8px}
+.drawer .pbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 16px 28px;display:flex;flex-direction:column;gap:18px;scrollbar-width:none}
+.drawer .pbody::-webkit-scrollbar{display:none}
+@keyframes slidein{from{transform:translateX(100%)}}
+@keyframes fade{from{opacity:0}}
+.icon-btn{flex:0 0 auto;width:36px;height:36px;border-radius:10px;border:0;background:var(--sunk);display:grid;place-items:center;color:var(--ink);padding:0}
+.icon-btn svg{width:18px;height:18px}
+.me{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:none;padding:2px 0}
+.avatar{flex:0 0 52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-family:var(--f-display);font-weight:800;font-size:20px;overflow:hidden}
+.avatar svg{width:100%;height:100%;display:block}
+.avatar.sm{flex-basis:44px;height:44px;font-size:17px}
+.me .ml,.mrow .ml{flex:1;min-width:0;display:flex;flex-direction:column}
+.me .ml b{font-size:16px}
+.me .ml span,.mrow .ml span{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--muted);display:grid;flex:0 0 auto}
+.mgroup{display:flex;flex-direction:column;gap:2px}
+.mgroup > .eyebrow{padding:0 8px 4px}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:none;padding:9px 8px;border-radius:12px}
+.mrow:hover{background:var(--sunk)}
+.mrow .mi{flex:0 0 34px;height:34px;border-radius:10px;background:var(--sunk);display:grid;place-items:center}
+.mrow .mi svg{width:18px;height:18px}
+.mrow .ml b{font-size:14.5px;font-weight:600}
+.mrow.danger{color:var(--bad)}
+.mrow.danger .mi{background:var(--bad-soft)}
+/* settings screens */
+.slist{background:var(--sunk);border-radius:18px;display:flex;flex-direction:column}
+.srow{display:flex;align-items:center;gap:12px;padding:13px 14px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none}
+.srow:last-child{border-bottom:0}
+button.srow:disabled{opacity:.5;cursor:not-allowed}
+.srow .sl{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.srow .sl b{font-size:14.5px;font-weight:600}
+.srow .sl span{font-size:12.5px;color:var(--muted)}
+.srow .sl .warn-text{color:var(--warn)}
+.switch{flex:0 0 auto;width:46px;height:28px;border-radius:999px;border:0;padding:0;background:var(--line);position:relative}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--good)}
+.switch[aria-checked="true"]::after{transform:translateX(18px)}
+.switch:disabled{opacity:.4;cursor:not-allowed}
+.shop-mark{flex:0 0 36px;height:36px;border-radius:10px;background:var(--screen);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:11px}
+.steps-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:14px;counter-reset:s}
+.steps-list li{display:flex;gap:12px;font-size:14px}
+.steps-list li::before{counter-increment:s;content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-weight:800;font-size:13px}
+.steps-list b{display:block;font-size:14.5px}
+textarea{font:inherit;color:inherit;border:1.5px solid var(--line);background:var(--sunk);border-radius:14px;padding:12px 14px;width:100%;min-height:120px;resize:vertical}
+textarea:focus{border-color:var(--accent);outline:none}
+.photo-box{height:220px;border-radius:22px;background:var(--sunk);display:grid;place-items:center;overflow:hidden}
+.photo-box svg{height:200px;max-width:100%}
+.app-head{display:flex;justify-content:space-between;align-items:center}
+/* log-in logo: 168 px (twice the earlier size); on short screens it shrinks just enough to keep the log-in buttons in view */
+.hero-brand{--logo:clamp(84px,calc(100vh - 546px),168px);--logo:clamp(84px,calc(100dvh - 546px),168px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;font-family:var(--f-display);font-weight:800}
+@media (max-width:440px){.hero-brand{--logo:clamp(84px,calc(100vh - 514px),168px);--logo:clamp(84px,calc(100dvh - 514px),168px)}}
+.hero-brand i{width:var(--logo);height:var(--logo);border-radius:calc(var(--logo) * .2857);background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-style:normal;font-size:calc(var(--logo) / 3);letter-spacing:-.02em;box-shadow:0 28px 60px -32px var(--accent)}
+.hero-brand span{font-size:42px;line-height:1;letter-spacing:-.02em}
+.brandmark{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-size:18px}
+.brandmark i{width:28px;height:28px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-style:normal;font-size:10.5px;letter-spacing:-.02em}
+.recent{display:flex;gap:12px;align-items:center;border:0;background:none;padding:6px 0;text-align:left;width:100%}
+.recent .thumb{flex:0 0 44px;height:44px;border-radius:12px;background:var(--sunk);display:grid;place-items:center}
+.recent .thumb svg{width:34px;height:34px}
+.recent .meta{flex:1;min-width:0;font-size:13px;color:var(--muted)}
+.recent .meta b{display:block;color:var(--ink);font-size:14px}
+
+.scanbox{position:relative;height:300px;border-radius:24px;background:var(--sunk);display:grid;place-items:center;overflow:hidden}
+.scanbox svg{height:250px}
+.scanline{position:absolute;left:0;right:0;height:3px;background:var(--accent);box-shadow:0 0 18px var(--accent);animation:scan 1.1s ease-in-out infinite alternate}
+@keyframes scan{from{top:8%}to{top:92%}}
+.mlabel{position:absolute;font-family:var(--f-mono);font-size:11px;background:var(--screen);padding:2px 6px;border-radius:6px;border:1px solid var(--line)}
+
+/* ---------- tester notebook ---------- */
+.notebook{flex:0 0 auto;width:100%;max-width:760px;display:flex;flex-direction:column;gap:26px;padding-top:28px;border-top:1.5px solid var(--line)}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px;align-items:start}
+.nb-head{display:flex;flex-direction:column;gap:8px}
+.nb-head .h1{font-size:38px}
+.nb-head .ver{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.nb-sec{display:flex;flex-direction:column;gap:12px}
+.nb-sec > h2{font-size:19px;font-weight:700}
+.task{background:var(--screen);border:1.5px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.task.active{border-color:var(--accent)}
+.task.done{border-color:var(--good)}
+.task .t-top{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.task .t-n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.task p{font-size:14.5px}
+.task .goal{font-size:13px;color:var(--muted)}
+.task .live{font-family:var(--f-mono);font-size:13px;display:flex;gap:14px;flex-wrap:wrap}
+.rate{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+.rate button{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);background:var(--screen);font-weight:700}
+.rate button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.res-wrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:14px;background:var(--screen)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.log{font-family:var(--f-mono);font-size:12px;color:var(--muted);max-height:140px;overflow:auto;background:var(--screen);border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.notes{font-size:14px;display:flex;flex-direction:column;gap:8px;margin:0;padding-left:18px}
+.notes li b{font-weight:700}
+
+@media (max-width:860px){
+  .stage{gap:36px}
+}
+@media (max-width:440px){
+  body{padding-block:8px}
+  .phone{width:100%;height:min(800px,calc(100dvh - 16px));padding:6px;border-radius:34px}
+  .screen{border-radius:28px}
+  .statusbar .notch{width:84px}
+  .nb-head .h1{font-size:30px}
+}
+
+/* in-app light/dark switch: overrides the tokens inside the phone screen only */
+.screen[data-app-theme="light"]{--phone:#16121F; --screen:#FFFFFF; --sunk:#F5F3F8; --ink:#1B1530; --muted:#6A6378; --line:#E3DEEA; --fig-line:#3D3549; --fig-op:.34;
+  --accent:#D9338A; --accent-soft:#FCE4F0; --on-accent:#FFFFFF;
+  --tape:#F4C33F; --tape-ink:#3A2C00; --blue:#2F6FE0; --blue-soft:#E3ECFC;
+  --good:#1B8A4F; --good-soft:#E0F4E8; --warn:#A86200; --warn-soft:#FFF0D6; --bad:#C23A3A; --bad-soft:#FBE4E4; color-scheme:light}
+.screen[data-app-theme="dark"]{--phone:#000000; --screen:#1B1824; --sunk:#24202F; --ink:#EEEAF6; --muted:#A39CB2; --line:#353042; --fig-line:#CBC3D9; --fig-op:.46;
+  --accent:#FF6CB4; --accent-soft:#3A1D2D; --on-accent:#1B0B14;
+  --tape:#E9B935; --tape-ink:#2A2000; --blue:#7AA8FF; --blue-soft:#1E2A44;
+  --good:#5BD08F; --good-soft:#163024; --warn:#F2AE4B; --warn-soft:#3A2A12; --bad:#FF8484; --bad-soft:#3D1C1F; color-scheme:dark}
+.theme-switch{position:relative;display:inline-flex;align-items:center;justify-content:space-between;width:68px;height:34px;padding:0 8px;border-radius:999px;border:1.5px solid var(--line);background:var(--sunk);color:var(--muted)}
+.theme-switch svg{width:16px;height:16px;position:relative;z-index:1}
+.theme-switch .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--screen);box-shadow:0 1px 4px rgba(0,0,0,.25);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.theme-switch[aria-checked="true"] .knob{transform:translateX(32px);background:var(--ink)}
+.theme-switch[aria-checked="false"] .sun,.theme-switch[aria-checked="true"] .moon{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* v4: Size Wizard options open their own pages */
+.method.go > span:nth-child(2){flex:1}
+.method.go{padding-right:10px}
+.method .chev{color:var(--muted);margin-left:-6px}
+.mp-head{gap:10px}
+.mp-ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.mp-ic svg{width:26px;height:26px}
+.mp-body .sample{padding:20px 12px}
+.mp-body .sample b{font-size:16px}
+.mp-body .sample span{font-size:14.5px;word-break:normal;overflow-wrap:anywhere}
+/* v4: Fitting Room and Styles shown as coming soon */
+.soon-area{position:relative;flex:1 1 0;min-height:0;overflow:hidden;margin:0 -20px -12px;padding:0 20px 12px}
+.soon-blur{display:flex;flex-direction:column;gap:16px;filter:blur(6px);pointer-events:none;user-select:none}
+.soon{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;pointer-events:none}
+.soon .hanger{width:150px;height:auto;color:var(--accent);transform-origin:50% 5.7%;animation:swing 2.2s ease-in-out infinite;overflow:visible;filter:drop-shadow(0 0 14px var(--screen))}
+@keyframes swing{0%{transform:rotate(9deg)}50%{transform:rotate(-9deg)}100%{transform:rotate(9deg)}}
+.soon b{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1.02;letter-spacing:-.01em;color:var(--ink);text-shadow:0 0 18px var(--screen),0 0 36px var(--screen)}
+@media (prefers-reduced-motion: reduce){.soon .hanger{animation:none;transform:rotate(4deg)}}
+</style>
+
+<div class="stage">
+  <div class="phone" aria-label="Size &amp; Fit App prototype">
+    <div class="screen" id="screen">
+      <div class="statusbar"><span class="mono">9:41</span><span class="notch"></span><span class="mono">5G ▮▮▮</span></div>
+      <div class="view" id="view"></div>
+      <div class="vrail" id="viewRail" hidden aria-hidden="true"><b></b></div>
+      <div class="dock" id="dock" hidden></div>
+      <nav class="tabbar" id="tabbar" hidden></nav>
+      <div class="toast" id="toast" role="status"></div>
+      <div id="sheet"></div>
+      <div id="drawer"></div>
+    </div>
+  </div>
+
+  <section class="notebook" aria-label="Test guide">
+    <div class="nb-head">
+      <span class="eyebrow">Group 3 · Agile Making &amp; Prototyping</span>
+      <h1 class="h1">Size &amp; Fit App</h1>
+      <span class="ver">Mid-fidelity prototype · v4, from 4 Nov · built from the concept brief and user flows</span>
+      <p class="sub">Tap through the phone above. Flow 1 (first app usage) starts on the log-in screen; Flow 2 (Size Wizard) is the first tab. After setup, the menu button at the top right opens the profile and settings. Nothing is sent anywhere, and the camera is never used.</p>
+    </div>
+
+    <div class="nb-sec">
+      <h2>Test tasks</h2>
+      <p class="sub">Start a task and the page scrolls up to the phone. Hand it over, and the timer and tap count run until the task is done. Then come back here to rate it. Each goal is the measurable outcome the group is testing against.</p>
+      <div id="tasks" class="task-grid"></div>
+    </div>
+
+    <div class="nb-sec">
+      <h2>Results</h2>
+      <div class="res-wrap"><table id="results"><thead><tr><th>Task</th><th>Variant</th><th>Time</th><th>Taps</th><th>Rating</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn small" id="copyRes">Copy results</button>
+        <button class="btn small ghost" id="clearRes">Clear results</button>
+        <button class="btn small ghost" id="resetProto">Reset prototype</button>
+      </div>
+      <p class="sub" style="font-size:13px">Results stay in this browser only. Copy them into the group's sheet or FigJam after each session.</p>
+      <div class="log" id="log" aria-label="Event log"></div>
+    </div>
+
+    <div class="nb-sec">
+      <h2>Version history</h2>
+      <ul class="notes">
+        <li><b>v4, from 4 Nov.</b>
+          <ul style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+            <li>Fitting Room and Styles are not ready yet, so both tabs show their page blurred, with a pink clothes hanger swinging above "Coming soon". The group compared this with a "Teaser" stamp and chose the blur. T4 and T5, which tested these two tabs, are removed from the test panel. The other tasks keep their numbers, so earlier results still match.</li>
+            <li>The AI scan screen has one main button, "Take picture", in the same pink and size as the main buttons on the other screens. "Import one" is gone.</li>
+            <li>On the Size Wizard home, each of the three options (Share from another app, Paste a link, Upload screenshots) opens its own page, instead of a panel further down the same page. The example boxes on those pages have bigger text and more space above and below it.</li>
+            <li>A size result shows only the best match. The second and third sizes are gone, so the H&amp;M mixed-signals screen no longer offers "Show me both".</li>
+          </ul></li>
+        <li><b>v3, 2 to 4 Nov.</b>
+          <ul style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+            <li>Every screen that scrolls shows a side bar on the right, so it's clear there is more to see. It also shows in the menu and in pop-up sheets, and it moves as you scroll.</li>
+            <li>Empty fields are blank. They no longer show example values such as "29" or "e.g. Lisen" that could look already filled in. "Tell us about the item" starts empty too, with a link to fill in example answers for testing.</li>
+            <li>On the log-in screen the logo is twice as big, and the logo, app name and line are centred. The line no longer says "new or second-hand".</li>
+            <li>Setup screens no longer show "Screen N of 6 · Required/Optional". The progress bar at the top shows every step reached in pink, with no blue for the optional ones.</li>
+            <li>Above the tape, "Fit profile completion" sits on the left and "N cm of 100" on the right, where "% complete" used to be. The tape itself only has a tiny 0 and 100 printed at its ends.</li>
+            <li>New wording: the log-in screen says "Know your size before you buy.", the basics screen is "A few basics first", and the next screen says "Nice to meet you, Lisen! Your profile is created." That screen no longer has "Start using the app", so people reach the app through the optional screens, each with "Maybe later".</li>
+            <li>Setup screens have no line under the title, and Skip is now "Maybe later". More of the app uses the new tone of voice (warm, short, uses the name): the profile-created screen, the Size Wizard home, "Finding your size, Lisen…", the link error, the log-out pop-up and two confirmations. Delete account and privacy stay plain. "Add clothes you kept or sent back" now opens the Purchase history Why? pop-up.</li>
+            <li>The profile created screen went through four versions, compared side by side, and the group chose version 4. It has the progress bar on top, a bigger centred greeting, the tape, and "Four optional steps for a more accurate fit. Add what you know, we'll handle the rest.", spread evenly down the screen. The badge, confetti and step tiles are gone.</li>
+            <li>"A few questions" follows the group's new layout. Body shape is a row of cards you swipe through: slim fashion-sketch figures in the style of a figure-type chart, with arms hanging naturally along the body, each with its shape (triangle, inverted triangle, rectangle, hourglass, diamond, tube or circle) laid over it in pink. The figures match the gender from the basics screen: men get Trapezoid instead of Hourglass, and "Prefer not to say" gets neutral figures. The chart's "Ideal" type is left out on purpose. Your build and Desired fit are three text cards each. There is no scroll bar: the next card peeks in at the edge, "Swipe for more" points the way, and the row slides a little once when the screen opens. On a computer, drag the row with the mouse. T1 notes whether testers swiped the shapes.</li>
+            <li>After Purchase history, a last milestone says "All set, Lisen! You're ready to use the app." and shows what is in the Size Wizard, Fitting Room and Styles before the app opens. T1 still stops when the last setup screen is done, so its times compare with earlier rounds.</li>
+            <li>Each setup screen's explanation sits behind a Why? button next to its title and opens in a pop-up, instead of a box that is always shown. T1 counts how many times testers open it.</li>
+            <li>On a computer, the phone now sits alone at the top of the page, with the test guide, tasks, results and notes below it, so testers focus on the phone only. On shorter screens the phone gets shorter, so it always fits without scrolling the page. Starting a task scrolls back up to the phone.</li>
+          </ul></li>
+        <li><b>v2, 26 to 30 Oct.</b>
+          <ul style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+            <li>After setup, a hamburger menu replaces the profile icon. It opens a fuller profile and settings area: fit profile, personal details, your photo, connected shops, sizes and units, appearance, notifications, language, privacy and data, help, and log out.</li>
+            <li>The basics screen asks for gender (Woman, Man or Prefer not to say), since many shops split size charts into women's and men's.</li>
+            <li>Every setup screen has a Back button. Skip sits under the main button, on a bottom bar that stays visible while the screen scrolls.</li>
+            <li>The group chose onboarding version B (a tip on each setup screen) over version A (one intro guide after screen 2), so version A is gone.</li>
+            <li>The first screen has a light/dark switch, and the purchase history tip says that clothes added in the Fitting Room show up there.</li>
+            <li>Testing: T1 counts back taps, and the new task T6 tests the menu.</li>
+          </ul></li>
+        <li><b>v1, 15 Oct.</b> First build from the concept brief and the two user flows, with both onboarding versions behind an A/B switch.</li>
+      </ul>
+    </div>
+
+    <div class="nb-sec">
+      <h2>What this version proposes</h2>
+      <ul class="notes">
+        <li><b>Breaking points get a way out.</b> The flows ask what the user sees when one happens. Here an unreadable link offers a screenshot or typing the details, an unusable screenshot says what to capture, and conflicting data lets the user choose which source to trust.</li>
+        <li><b>Both Flow 2 backlog items are in.</b> The result shows the best size with its match percentage, and a slider fine-tunes it for a looser or tighter fit than the item's own.</li>
+        <li><b>The tape measure is the profile.</b> Every optional onboarding screen visibly lengthens it, and a short tape lowers the top match percentage, so skipping has a cost the user can see.</li>
+        <li><b>The menu holds the profile and settings.</b> Connecting Zalando imports three sample orders into the purchase history and lengthens the tape. Connecting Atelier Nord, the small boutique, shows the "format can't be read" case, the import-format risk in the concept brief. Your photo is set up under personal details, since the brief puts it under user info in settings. Sizes and units, notifications and language only save the choice for now.</li>
+        <li><b>Fitting Room and Styles are coming soon.</b> Both tabs show their page blurred, with a swinging hanger and "Coming soon" on top. The user flows only cover Flow 1 and Flow 2, so the tasks test those.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- garments ---------- */
+const G = {
+  jeans:'<path d="M18 6h28l4 52H36l-4-32-4 32H14z"/><path d="M18 12h28" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>',
+  shirt:'<path d="M22 8 10 13 4 40l8 2 5-20v34h30V22l5 20 8-2-6-27-12-5-10 8z"/><path d="M32 16v40" stroke="rgba(0,0,0,.22)" stroke-width="2" fill="none"/>',
+  sweater:'<path d="M22 8 10 13 4 43l8 2 5-22v33h30V23l5 22 8-2-6-30-12-5c-2 3-6 5-10 5s-8-2-10-5z"/><path d="M17 52h30" stroke="rgba(0,0,0,.2)" stroke-width="3" fill="none"/>',
+  tee:'<path d="M22 8 10 14 4 26l9 4 3-6v32h32V24l3 6 9-4-6-12-12-6c-2 4-6 6-10 6s-8-2-10-6z"/>',
+  jacket:'<path d="M22 6 10 12 4 46l8 2 5-24v34h30V24l5 24 8-2-6-34-12-6-10 10z"/><path d="M32 16v42M22 6l6 16M42 6l-6 16" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none"/>',
+  skirt:'<path d="M20 10h24l9 44H11z"/><path d="M20 16h24" stroke="rgba(0,0,0,.22)" stroke-width="2" fill="none"/>',
+  chinos:'<path d="M19 6h26l3 52H36l-4-30-4 30H16z"/>',
+  blouse:'<path d="M24 8 12 14 6 34l8 3 4-10v29h28V27l4 10 8-3-6-20-12-6c-1 5-4 8-8 8s-7-3-8-8z"/>',
+  sneaker:'<path d="M6 40c0-6 2-14 6-16l10 6 8-4 10 8c6 2 16 3 18 6v6H6z"/>'
+};
+const garm = (type, color) => `<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="${color}">${G[type]}</g></svg>`;
+const icon = {
+  wand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m4 20 11-11M14 4v3M19 9h3M17.5 5.5l2-2M12 6.5 10.5 5M18.5 12l1.5 1.5"/></svg>',
+  hanger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7a2 2 0 1 1 2-2c0 1.5-2 2-2 3.5V9L3 16a1.5 1.5 0 0 0 1 2.5h16a1.5 1.5 0 0 0 1-2.5L12 9"/></svg>',
+  sparkle:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>',
+  image:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>',
+  alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.8 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z" stroke-linejoin="round"/></svg>',
+  scale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v16M5 20h14M6 8h12M6 8l-3 6a3 3 0 0 0 6 0zM18 8l-3 6a3 3 0 0 0 6 0z" stroke-linejoin="round"/></svg>',
+  chevron:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg>',
+  chevR:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  ruler:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6.5 8v3M10 8v4M13.5 8v3M17 8v4" stroke-linecap="round"/></svg>',
+  scan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><circle cx="12" cy="9.5" r="2.2"/><path d="M8.5 16.5c.6-2 1.9-3 3.5-3s2.9 1 3.5 3"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2" stroke-linecap="round"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4" stroke-linecap="round"/></svg>',
+  globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+  chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  about:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M11 18.5h2" stroke-linecap="round"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg>'
+};
+
+/* ---------- items the Size Wizard knows ---------- */
+// order: sizes small to large; best: index matching the example profile; bias nudges it so numbers aren't symmetric.
+const ITEMS = {
+  levis:{brand:"Levi's",model:"501 Original Fit jeans",shop:"Zalando",type:"jeans",color:"#3D5F93",fit:"Regular fit, straight leg",material:"100% cotton denim, no stretch",
+    sizes:["W29 L32","W30 L32","W31 L32","W32 L32"],best:1,bias:.15,source:"link",url:"zalando.se/levis-501-original-fit-jeans",
+    why:["Your waist sits inside W30's range of 76 to 79 cm.","This denim has no stretch, so the app keeps the waist close to your measurement.","People with a profile like yours kept W30 in 8 of 10 orders."]},
+  hm:{brand:"H&M",model:"Oversized poplin shirt",shop:"H&M",type:"shirt",color:"#E9E4D8",fit:"Oversized",material:"100% cotton poplin",
+    sizes:["XS","S","M","L"],best:2,bias:-.1,source:"link",url:"hm.com/se/oversized-poplin-shirt",conflict:true,
+    why:["Your chest measurement points to M on the shop's chart.","214 reviews say it runs large, so S is close behind."]},
+  boutique:{brand:"Atelier Nord",model:"Linen wrap blouse",shop:"Small boutique",type:"blouse",color:"#C9A27E",fit:"Relaxed",material:"100% linen",
+    sizes:["34","36","38","40"],best:2,bias:.2,source:"link",url:"ateliernord-shop.se/p/linen-wrap-blouse?id=88213",fails:"format",
+    why:["The screenshot shows the boutique's own chart: 38 fits a chest of 88 to 92 cm, which matches yours.","Linen has no give, so the app does not size down."]},
+  arket:{brand:"Arket",model:"Wool-blend jumper",shop:"Arket",type:"sweater",color:"#8A9A6B",fit:"Regular fit",material:"60% wool, 40% recycled polyamide",
+    sizes:["XS","S","M","L"],best:2,bias:0,source:"screenshot",
+    why:["Arket's chart puts your chest in M.","Wool blends relax with wear, so M stays the safer pick over L."]},
+  blurry:{source:"screenshot",fails:"screenshot",type:"sweater",color:"#8A8F9A",model:"Photo of a jumper on a hanger"},
+  vinted:{brand:"Acne Studios",model:"Wool coat, second-hand",shop:"Vinted",type:"jacket",color:"#5B4A3F",fit:"Seller's measurements: chest 104 cm, length 98 cm",material:"80% wool",
+    sizes:["44","46","48","50"],best:1,bias:.25,source:"share",ownFormat:"EU 46 (Acne Studios)",
+    why:["The seller measured the coat flat; the chest leaves about 12 cm over your own, which is a regular fit for a coat.","Acne Studios 46 runs about one size larger than most brands' 46."]},
+  styles_jacket:{brand:"Our Legacy",model:"Overshirt in corduroy",shop:"Styles look by @linnea.layers",type:"jacket",color:"#A0673A",fit:"Boxy",material:"100% cotton corduroy",
+    sizes:["44","46","48","50"],best:1,bias:-.2,source:"styles",
+    why:["The creator wears 48 and is 6 cm taller with broader shoulders.","Boxy cut, so 46 still sits loose on you."]}
+};
+const SAMPLE_LINKS = [
+  {id:"levis",label:"Levi's 501 jeans",url:ITEMS.levis.url},
+  {id:"hm",label:"H&M oversized shirt",url:ITEMS.hm.url},
+  {id:"boutique",label:"Small boutique blouse",url:ITEMS.boutique.url}
+];
+
+const BRANDS = {
+  "Levi's":{models:["501 Original","511 Slim","Ribcage Straight"],sizes:["W28 L30","W29 L32","W30 L32","W31 L32","W32 L34"]},
+  "Zara":{models:["Straight-leg jeans","Oversized blazer","Basic T-shirt"],sizes:["XS","S","M","L","XL"]},
+  "H&M":{models:["Slim fit chinos","Relaxed hoodie","Linen shirt"],sizes:["XS","S","M","L","XL"]},
+  "Arket":{models:["Merino crew","Wide trousers","Cotton overshirt"],sizes:["XS","S","M","L"]},
+  "Uniqlo":{models:["Smart ankle pants","Supima tee","Ultra light down"],sizes:["XS","S","M","L","XL"]}
+};
+
+/* ---------- state ---------- */
+const fresh = () => ({
+  screen:"login", tab:"wizard", returnTo:null, provider:"Google", stack:[], menuOpen:false,
+  profile:{name:"",gender:"",age:"",height:"",weight:"",waist:"",hips:"",chest:"",inseam:"",shape:null,athletic:null,fit:"Regular"},
+  steps:{basic:false,scan:false,meas:false,questions:false,history:false},
+  scanFrom:false, history:[], hist:{brand:"",model:"",size:"",outcome:"Kept"},
+  method:"link", linkText:"", man:{b:"",i:"",s:""}, item:null, tune:0, conflictPick:null, failedFirst:false, origin:null,
+  closet:[{id:"c1",type:"tee",color:"#F1EFEA",name:"White tee",zone:"inner",brand:"Uniqlo",size:"M",paid:149},
+          {id:"c2",type:"sweater",color:"#2E4A62",name:"Navy knit",zone:"mid",brand:"COS",size:"M",paid:890},
+          {id:"c3",type:"jacket",color:"#7A6A4F",name:"Field jacket",zone:"outer",brand:"Arket",size:"M",paid:1490},
+          {id:"c4",type:"chinos",color:"#C8B48E",name:"Beige chinos",zone:"lower",brand:"H&M",size:"W30",paid:399},
+          {id:"c5",type:"skirt",color:"#5C3A55",name:"Midi skirt",zone:"lower",brand:"& Other Stories",size:"36",paid:690}],
+  filter:"all", outfit:{inner:null,mid:null,outer:null,lower:null}, look:null,
+  prefs:{photo:false, photoInRoom:true, shops:{"Zalando":"off","Boozt":"off","ASOS":"off","Atelier Nord":"off"}, resale:{Sellpy:false,Vinted:false,Tradera:false},
+    charts:null, sizeAs:"The shop's own sizes", units:"cm and kg", notif:{looks:true,profile:true,resale:true,tips:false}, lang:"English",
+    share:true, keepPhotos:false, fbType:"An idea", fbText:""}
+});
+let S = fresh();
+const variant = "B"; // the group chose version B (a tip on each setup screen) on 30 Oct; results still record it
+let appTheme = null; // "light" | "dark" | null (follow the viewer's theme)
+try { appTheme = localStorage.getItem("sf-app-theme"); } catch(e) {}
+const effectiveTheme = () => appTheme || document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+const accuracy = () => {
+  const s = S.steps; return (s.basic?35:0)+(s.scan?20:0)+(s.meas?20:0)+(s.questions?10:0)+(s.history?15:0);
+};
+
+/* ---------- testing ---------- */
+const TASKS = [
+  {id:"T1",title:"Set up your profile so the app can recommend sizes.",goal:"Goal: finish the required screens in under 60 s with no help. Also count how many optional screens people choose to do.",start:"login",doneOn:"onboard_done",q:"How easy was it? (1 hard, 5 easy)"},
+  {id:"T2",title:"You found Levi's 501 jeans in the Zalando app. Find out which size to order.",goal:"Goal: a size in under 45 s and 8 taps or fewer.",start:"app",doneOn:"result:levis",q:"How sure are you this size would fit? (1 not at all, 5 very)"},
+  {id:"T3",title:"Check the size of a linen blouse from a small boutique. If something goes wrong, find another way.",goal:"Goal: 4 of 5 testers reach a size after the link fails.",start:"app",doneOn:"recovered",q:"How easy was it to recover? (1 hard, 5 easy)"},
+  {id:"T6",title:"Connect your Zalando account, so the app can learn from what you have bought before.",goal:"Goal: done in under 30 s without help, starting from the Size Wizard.",start:"app",doneOn:"shop_connected:Zalando",q:"How easy was it to find? (1 hard, 5 easy)"}
+];
+let active = null; // {id, t0, taps, notes:[]}
+let results = [];
+let pendingRate = null;
+try { results = JSON.parse(localStorage.getItem("sf-results")||"[]"); } catch(e) { results = []; }
+const saveResults = () => { try { localStorage.setItem("sf-results", JSON.stringify(results)); } catch(e) {} };
+const logLines = [];
+function log(msg){
+  const t = new Date().toTimeString().slice(0,8);
+  logLines.unshift(`${t}  ${msg}`); if (logLines.length>40) logLines.pop();
+  $("#log").innerHTML = logLines.map(l=>`<span>${esc(l)}</span>`).join("");
+}
+function emit(ev){
+  log(ev);
+  if (active){
+    if (ev.startsWith("breaking point")) active.notes.push(ev.replace("breaking point: ",""));
+    const task = TASKS.find(t=>t.id===active.id);
+    if (task.doneOn===ev){
+      const secs = (performance.now()-active.t0)/1000;
+      const extra = active.id==="T1" ? `${["scan","meas","questions","history"].filter(k=>S.steps[k]).length} of 4 optional${active.backs?`; ${active.backs} back tap${active.backs>1?"s":""}`:""}${active.whys?`; ${active.whys} Why? tap${active.whys>1?"s":""}`:""}${active.qSeen?`; body shapes ${active.swiped?"swiped":"not swiped"}`:""}` : "";
+      pendingRate = {task:active.id,variant,time:secs,taps:active.taps,rating:null,notes:[extra,...active.notes].filter(Boolean).join("; ")};
+      active = null; renderTasks();
+    }
+  }
+}
+
+function seedProfile(){
+  // used when a task starts inside the app: an example profile, marked as such in the UI
+  Object.assign(S.profile,{name:"Tester",gender:"Woman",age:"29",height:"170",weight:"64",waist:"77",hips:"97",chest:"89",inseam:"79",shape:"Hourglass",athletic:"Somewhat",fit:"Regular"});
+  S.steps = {basic:true,scan:false,meas:true,questions:true,history:false};
+  S.example = true; S.onboarded = true;
+}
+function startTask(id){
+  const t = TASKS.find(x=>x.id===id);
+  S = fresh();
+  if (t.start==="app"){ seedProfile(); S.screen="main"; S.tab = "wizard"; }
+  active = {id,t0:performance.now(),taps:0,notes:[]};
+  pendingRate = null; sheet(""); $("#toast").classList.remove("show");
+  log(`start ${id}`);
+  render(); renderTasks();
+  const top = $(".phone").getBoundingClientRect().top + scrollY - 24;
+  window.scrollTo({top:Math.max(0,top), behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+}
+
+function renderTasks(){
+  const done = new Set(results.map(r=>r.task));
+  $("#tasks").innerHTML = TASKS.map(t=>{
+    const isActive = active && active.id===t.id;
+    const rate = pendingRate && pendingRate.task===t.id;
+    return `<div class="task ${isActive?"active":""} ${rate?"done":""}">
+      <div class="t-top"><span class="t-n">${t.id}${done.has(t.id)?" · tested":""}</span>
+        ${isActive?`<button class="btn small ghost" data-stop="${t.id}">Stop</button>`:`<button class="btn small ${rate?"ghost":"accent"}" data-start="${t.id}">${done.has(t.id)?"Run again":"Start"}</button>`}</div>
+      <p>${esc(t.title)}</p><p class="goal">${esc(t.goal)}</p>
+      ${isActive?`<div class="live"><span id="liveT">0.0 s</span><span id="liveTaps">${active.taps} taps</span></div>`:""}
+      ${rate?`<div class="live"><span>Done in ${pendingRate.time.toFixed(1)} s</span><span>${pendingRate.taps} taps</span></div>
+        <div class="rate"><span>${esc(t.q)}</span>${[1,2,3,4,5].map(n=>`<button data-rate="${n}" aria-pressed="false">${n}</button>`).join("")}</div>`:""}
+    </div>`;
+  }).join("");
+}
+setInterval(()=>{ if(active){ const el=$("#liveT"); if(el) el.textContent=((performance.now()-active.t0)/1000).toFixed(1)+" s"; } },200);
+
+function renderResults(){
+  $("#results tbody").innerHTML = results.length ? results.map(r=>`<tr><td>${r.task}</td><td>${r.variant}</td><td class="num">${r.time.toFixed(1)} s</td><td class="num">${r.taps}</td><td class="num">${r.rating??"–"}</td><td>${esc(r.notes||"")}</td></tr>`).join("")
+    : `<tr><td colspan="6" style="color:var(--muted)">No sessions yet. Start a task above.</td></tr>`;
+}
+
+$("#tasks").addEventListener("click",e=>{
+  const s=e.target.closest("[data-start]"), st=e.target.closest("[data-stop]"), r=e.target.closest("[data-rate]");
+  if(s) startTask(s.dataset.start);
+  if(st){ log(`stopped ${st.dataset.stop} (not finished)`); results.push({task:st.dataset.stop,variant,time:(performance.now()-active.t0)/1000,taps:active.taps,rating:null,notes:"gave up / stopped"}); active=null; saveResults(); renderResults(); renderTasks(); }
+  if(r && pendingRate){ pendingRate.rating=+r.dataset.rate; results.push(pendingRate); pendingRate=null; saveResults(); renderResults(); renderTasks(); }
+});
+$("#copyRes").onclick=async()=>{
+  const txt = ["Task\tVariant\tTime (s)\tTaps\tRating\tNotes",...results.map(r=>`${r.task}\t${r.variant}\t${r.time.toFixed(1)}\t${r.taps}\t${r.rating??""}\t${r.notes||""}`)].join("\n");
+  try{ await navigator.clipboard.writeText(txt); $("#copyRes").textContent="Copied"; }
+  catch(e){ const sel=window.getSelection(); const rng=document.createRange(); rng.selectNodeContents($("#results")); sel.removeAllRanges(); sel.addRange(rng); $("#copyRes").textContent="Selected, press copy"; }
+  setTimeout(()=>$("#copyRes").textContent="Copy results",1800);
+};
+$("#clearRes").onclick=()=>{ results=[]; saveResults(); renderResults(); renderTasks(); };
+$("#resetProto").onclick=()=>{ S=fresh(); active=null; pendingRate=null; log("prototype reset"); render(); renderTasks(); };
+
+/* ---------- shared bits ---------- */
+function tape(){
+  const a = accuracy();
+  return `<div class="col" style="gap:6px"><div class="tape-row"><span>Fit profile completion</span><span><b>${a}</b> cm of 100</span></div>
+    <div class="tape" role="img" aria-label="Fit profile completion, ${a} cm of 100"><div class="fill" style="width:${a}%"></div><div class="ticks"></div><span class="tn l${a>0?" on":""}">0</span><span class="tn r${a>=94?" on":""}">100</span></div></div>`;
+}
+function stepper(n){
+  return `<div class="stepper">${[1,2,3,4,5,6].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</div>`;
+}
+// each setup screen explains itself behind a Why? button next to its title
+const WHY = {
+  basic:"Gender, height and weight give a first estimate of your body. Every later step makes it sharper.",
+  scan:"A scan fills in measurements most people don't know, like inseam and shoulder width.",
+  meas:"Measurements beat guesses: a brand's size chart can be matched directly against them.",
+  questions:"Two people with the same waist can need different sizes. Shape and fit preference explain why.",
+  history:"Add clothes you kept or sent back. A W30 you kept tells the app more than any chart. Clothes you add to your Fitting Room will show up here too."
+};
+const titleRow = (title,k) => `<div class="title-row"><h2 class="h2">${title}</h2><button class="why-btn" data-a="why" data-k="${k}" data-t="${title}" aria-haspopup="dialog">${icon.info}Why?</button></div>`;
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove("show"),2200); }
+function sheet(html){ $("#sheet").innerHTML = html ? `<div class="sheet-bg" data-a="closeSheet"><div class="sheet" data-stop>${`<span class="grab"></span>`+html}</div><div class="vrail" hidden aria-hidden="true"><b></b></div></div>` : ""; watchRails(); }
+
+/* ---------- screens ---------- */
+const V = {};
+
+V.login = () => { const dark = effectiveTheme()==="dark"; return `
+  <div class="row"><div class="spacer"></div>
+    <button class="theme-switch" role="switch" aria-checked="${dark}" aria-label="Dark mode" data-a="theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <span class="knob"></span>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+    </button></div>
+  <div class="spacer"></div>
+  <div class="hero-brand"><i>S&amp;F</i><span>Size &amp; Fit</span></div>
+  <h1 class="h1" style="font-size:30px;text-align:center;text-wrap:balance">Know your size before you buy.</h1>
+  <div class="spacer"></div>
+  <div class="col">
+    <button class="btn" data-a="login" data-v="Google">Continue with Google</button>
+    <button class="btn ghost" data-a="login" data-v="Apple">Continue with Apple</button>
+    <button class="btn link" data-a="login" data-v="email">Use email instead</button>
+  </div>`; };
+
+const GENDERS = ["Woman","Man","Prefer not to say"];
+const basicOk = p => !!(p.name&&p.gender&&p.age&&p.height&&p.weight);
+const backBtn = to => `<button class="back" data-a="back" data-to="${to}">${icon.chevron} Back</button>`;
+// footer buttons are written inline and lifted into the fixed #dock layer by render()
+const dock = html => `<div class="dock-src" hidden>${html}</div>`;
+const skipBtn = n => S.returnTo ? "" : `<button class="btn link skip" data-a="skip" data-n="${n}">Maybe later</button>`;
+V.basic = () => { const p=S.profile; const ok = basicOk(p);
+  return `${stepper(2)}
+  <div class="row">${backBtn("login")}</div>
+  ${titleRow("A few basics first","basic")}
+  <div class="field"><label for="f-name">Name</label><input id="f-name" data-f="name" value="${esc(p.name)}" autocomplete="off"></div>
+  <div class="col" style="gap:8px"><span class="flabel" id="g-lab">Gender</span>
+    <div class="chips" role="group" aria-labelledby="g-lab">${GENDERS.map(o=>`<button class="chip" data-a="pick" data-k="gender" data-v="${o}" aria-pressed="${p.gender===o}">${o}</button>`).join("")}</div>
+    <span class="sub" style="font-size:12px">Many shops split their size charts into women's and men's. With "Prefer not to say", the app compares both.</span></div>
+  <div class="grid2">
+    <div class="field"><label for="f-age">Age</label><div class="unit"><input id="f-age" data-f="age" inputmode="numeric" value="${esc(p.age)}"><span>yrs</span></div></div>
+    <div class="field"><label for="f-height">Height</label><div class="unit"><input id="f-height" data-f="height" inputmode="numeric" value="${esc(p.height)}"><span>cm</span></div></div>
+    <div class="field"><label for="f-weight">Weight</label><div class="unit"><input id="f-weight" data-f="weight" inputmode="numeric" value="${esc(p.weight)}"><span>kg</span></div></div>
+  </div>
+  <button class="btn link" data-a="fillBasic" style="align-self:flex-start;padding-left:0">Fill with example answers</button>
+  ${dock(`<button class="btn accent" data-a="basicDone" id="basicBtn" ${ok?"":"disabled"}>Continue</button>`)}`; };
+
+const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
+// All set is a milestone: a badge with confetti
+const CONFETTI = `<svg class="confetti" viewBox="0 0 170 124" aria-hidden="true">
+  <rect x="10" y="20" width="10" height="4" rx="1.5" transform="rotate(-25 15 22)" style="fill:var(--accent)"/><circle cx="30" cy="96" r="3.5" style="fill:var(--tape)"/>
+  <rect x="143" y="18" width="10" height="4" rx="1.5" transform="rotate(30 148 20)" style="fill:var(--blue)"/><circle cx="152" cy="82" r="3.5" style="fill:var(--accent)"/>
+  <rect x="137" y="106" width="10" height="4" rx="1.5" transform="rotate(-15 142 108)" style="fill:var(--tape)"/><circle cx="12" cy="64" r="2.5" style="fill:var(--blue)"/>
+  <rect x="42" y="6" width="8" height="3.5" rx="1.5" transform="rotate(40 46 8)" style="fill:var(--good)"/><circle cx="122" cy="6" r="2.5" style="fill:var(--good)"/>
+  <rect x="20" y="42" width="8" height="3.5" rx="1.5" transform="rotate(70 24 44)" style="fill:var(--tape)"/><circle cx="160" cy="44" r="2" style="fill:var(--accent)"/>
+  <rect x="46" y="114" width="8" height="3.5" rx="1.5" transform="rotate(-35 50 116)" style="fill:var(--blue)"/><circle cx="118" cy="118" r="2.5" style="fill:var(--good)"/></svg>`;
+// profile created (the group's version 4): progress bar, a centred greeting, the tape so far and the next step, spread down the screen
+V.ready = () => `${stepper(2)}
+  <div class="row">${backBtn("basic")}</div>
+  <div class="spread">
+    <div class="hello"><h1 class="h1">Nice to meet you${S.profile.name?`, ${esc(S.profile.name)}`:""}!</h1><p>Your profile is created.</p></div>
+    ${tape()}
+    <div class="next"><h2 class="next-title">Four optional steps for a more accurate fit.</h2><p class="next-sub">Add what you know, we'll handle the rest.</p></div>
+  </div>
+  ${dock(`<button class="btn accent" data-a="go" data-to="scan">Make my profile sharper</button>`)}`;
+
+// the last milestone: setup is done and the app opens next
+V.allset = () => `<div class="row">${backBtn("history")}</div>
+  <div class="milestone">
+    <div class="badge-wrap">${CONFETTI}<span class="badge" aria-hidden="true">${CHECK}</span></div>
+    <h1 class="h1">All set${S.profile.name?`, ${esc(S.profile.name)}`:""}!</h1>
+    <p class="done">You're ready to use the app.</p>
+  </div>
+  ${tape()}
+  ${accuracy()<100?`<p class="sub" style="text-align:center;margin-top:-6px">You can add the rest anytime from the menu.</p>`:""}
+  <div class="inside">${[[icon.wand,"Size Wizard","Your size in any shop"],[icon.hanger,"Fitting Room","Try your clothes together"],[icon.sparkle,"Styles","Looks from people like you"]]
+    .map(([ic,t,d])=>`<div><span class="si">${ic}</span><span><b>${t}</b><span>${d}</span></span></div>`).join("")}</div>
+  ${dock(`<button class="btn accent" data-a="enterApp">Let's go</button>`)}`;
+
+function optHead(n,title,k){
+  const prev = S.returnTo || {3:"ready",4:"scan",5:"meas",6:"questions"}[n];
+  return `${S.returnTo?"":stepper(n)}
+  <div class="row">${backBtn(prev)}</div>
+  ${S.returnTo?`<span class="eyebrow">Add to your profile</span>`:""}
+  ${titleRow(title,k)}${tape()}`;
+}
+
+V.scan = () => {
+  const st = S.scanState||"idle";
+  const body = `<svg viewBox="0 0 100 220" aria-hidden="true"><g fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-linejoin="round"><circle cx="50" cy="22" r="14"/><path d="M50 36v4M30 46c6-4 34-4 40 0l8 50-8 2-6-36v52l4 60H58l-8-52-8 52H32l4-60V62l-6 36-8-2z"/></g></svg>`;
+  const labels = st==="done" ? `<span class="mlabel" style="top:22%;left:12%">shoulders 41</span><span class="mlabel" style="top:43%;right:10%">waist ≈ 77</span><span class="mlabel" style="top:55%;left:10%">hips ≈ 97</span><span class="mlabel" style="top:70%;right:14%">inseam ≈ 79</span>`:"";
+  return `${optHead(3,"AI scan","scan")}
+  <div class="scanbox">${body}${st==="scanning"?'<div class="scanline"></div>':""}${labels}</div>
+  <p class="sub" style="font-size:12.5px">Prototype: no camera is used. Tapping Take picture plays a pretend scan.</p>
+  ${dock((st==="done"?`<button class="btn accent" data-a="scanDone">Use these measurements</button>`
+   :`<button class="btn accent" data-a="scan" ${st==="scanning"?"disabled":""}>Take picture</button>`)+skipBtn(3))}`;
+};
+
+V.meas = () => { const p=S.profile;
+  const f=(k,l,h)=>`<div class="field"><label for="m-${k}">${l} ${S.scanFrom&&p[k]?'<span class="tag pink">from scan</span>':""}</label><div class="unit"><input id="m-${k}" data-f="${k}" inputmode="decimal" value="${esc(p[k])}"><span>cm</span></div>${h?`<span class="sub" style="font-size:12px">${h}</span>`:""}</div>`;
+  return `${optHead(4,"Measurements","meas")}
+  <div class="grid2">${f("waist","Waist","Narrowest point")}${f("hips","Hips","Widest point")}${f("chest","Chest","Fullest point")}${f("inseam","Inseam","Crotch to ankle")}</div>
+  ${dock(`<button class="btn accent" data-a="measDone">Save measurements</button>${skipBtn(4)}`)}`; };
+
+/* body shape figures for "A few questions": slim fashion-sketch figures (about nine heads tall), drawn as lines like a
+   figure-type chart, with each shape laid over in pink. Built from four widths (shoulders, bust, waist, hips) so every
+   figure is consistent. Woman and Man come from the basics screen; "Prefer not to say" gets neutral figures. */
+const FIG_CX = 32, ff = x => Math.round(x*100)/100;
+function crPath(p, closed){ // smooth curve through the points
+  const n=p.length, at=i=>closed?p[(i+n)%n]:p[Math.max(0,Math.min(n-1,i))];
+  let d=`M${ff(p[0][0])} ${ff(p[0][1])}`;
+  for(let i=0;i<(closed?n:n-1);i++){ const a=at(i-1),b=at(i),c=at(i+1),e=at(i+2);
+    d+=`C${ff(b[0]+(c[0]-a[0])/6)} ${ff(b[1]+(c[1]-a[1])/6)} ${ff(c[0]-(e[0]-b[0])/6)} ${ff(c[1]-(e[1]-b[1])/6)} ${ff(c[0])} ${ff(c[1])}`; }
+  return d+(closed?"Z":"");
+}
+// limbs: ua upper arm, el elbow, wr wrist, ha hand (half-widths); kw knee, cw calf, aw ankle
+const FIG_BASE = {
+  Woman:  {n:1.75, ua:1.7,  el:1.25, wr:0.9,  ha:1.2,  kw:2.45, cw:2.8,  aw:1.15, hair:"bun",   suit:"leotard"},
+  Man:    {n:2.35, ua:2.1,  el:1.55, wr:1.1,  ha:1.45, kw:2.8,  cw:3.15, aw:1.4,  hair:"short", suit:"briefs"},
+  Neutral:{n:2.05, ua:1.9,  el:1.4,  wr:1.0,  ha:1.32, kw:2.6,  cw:2.95, aw:1.25, hair:null,    suit:"leotard"}
+};
+// the figure types from the group's reference chart; "Ideal" is left out, since it implies the other bodies are not
+const FIG_SHAPES = {
+  Woman: [["Triangular",{sh:10.3,bu:10.1,wa:8.2,hi:13.2},"tri"],["Inverted triangular",{sh:13.2,bu:11.7,wa:8.8,hi:9.9},"inv"],["Rectangular",{sh:11.3,bu:10.7,wa:9.6,hi:11},"rect"],
+          ["Hourglass",{sh:11.5,bu:11.5,wa:7.7,hi:11.9},"hour"],["Diamond",{sh:10.3,bu:10.9,wa:11.8,hi:11},"dia"],
+          ["Tubular",{sh:10.1,bu:9.2,wa:8.4,hi:9.2,ua:1.5,el:1.1,wr:0.82,ha:1.1,kw:2.25,cw:2.5,aw:1.08},"tube"],
+          ["Rounded",{sh:11.9,bu:12.9,wa:13.9,hi:13.3,ua:2.2,el:1.65,wr:1.1,ha:1.4,kw:3,cw:3.35,aw:1.38,n:2.1},"round"]],
+  Man:   [["Triangular",{sh:11.8,bu:11.6,wa:11.4,hi:12.8},"tri"],["Inverted triangular",{sh:15.2,bu:13.5,wa:10,hi:10.4},"inv"],["Rectangular",{sh:13.1,bu:12.2,wa:11,hi:11.2},"rect"],
+          ["Trapezoid",{sh:14.3,bu:13,wa:10.8,hi:11},"trap"],["Diamond",{sh:11.9,bu:12.8,wa:13.6,hi:11.8},"dia"],
+          ["Tubular",{sh:11.9,bu:10.8,wa:9.8,hi:10,ua:1.85,el:1.35,wr:1,ha:1.3,kw:2.55,cw:2.85,aw:1.3},"tube"],
+          ["Rounded",{sh:13.3,bu:14.3,wa:15.3,hi:13.8,ua:2.55,el:1.95,wr:1.3,ha:1.65,kw:3.3,cw:3.7,aw:1.62,n:2.8},"round"]],
+  Neutral:[["Triangular",{sh:11,bu:10.8,wa:9.4,hi:13.1},"tri"],["Inverted triangular",{sh:14.1,bu:12.5,wa:9.4,hi:10.2},"inv"],["Rectangular",{sh:12.1,bu:11.4,wa:10.2,hi:11.2},"rect"],
+          ["Hourglass",{sh:12.3,bu:12.1,wa:8.6,hi:12.3},"hour"],["Diamond",{sh:11.1,bu:11.8,wa:12.8,hi:11.4},"dia"],
+          ["Tubular",{sh:10.9,bu:9.9,wa:9,hi:9.6,ua:1.65,el:1.22,wr:0.9,ha:1.2,kw:2.4,cw:2.65,aw:1.18},"tube"],
+          ["Rounded",{sh:12.7,bu:13.7,wa:14.7,hi:13.6,ua:2.4,el:1.8,wr:1.2,ha:1.52,kw:3.15,cw:3.5,aw:1.5,n:2.4},"round"]]
+};
+const figGender = g => g==="Woman"||g==="Man" ? g : "Neutral";
+const both = f => f(1)+f(-1);
+function figure(g, w, type){
+  g = figGender(g); const b = {...FIG_BASE[g], ...w}; const {n,sh,bu,wa,hi,ua,el,wr,ha,kw,cw,aw} = b; const C=FIG_CX, X=(s,x)=>ff(C+s*x);
+  // legs: centred under each hip, knees and ankles close together
+  const lc=hi/2+0.15, lk=3.45+(hi-11)*0.14, la=2.95+(hi-11)*0.07;
+  const thighOut=(hi-0.3)*0.6+(lk+kw)*0.4+0.45, thighIn=1.05+Math.max(0,hi-11)*0.06;
+  const side=[[n,14.5],[n+0.1,19.4],[n+2.6,21.25],[sh-2.2,22.5],[sh-0.5,23.4],[sh+0.25,25.4],[bu+0.15,30.6],[bu,33],[(bu+wa)/2+0.2,38.4],[wa,44],[(wa+hi)/2+0.55,50.4],[hi,56.4],[hi-0.3,61.6],
+    [thighOut,72],[lk+kw+0.2,83],[lk+kw,90],[lk+cw,99],[la+aw+0.6,111],[la+aw,119.8],[la+aw+0.35,123.2],[la+0.35,127.6],[la-aw-0.15,124.2],[la-aw,120.4],[la-aw-0.15,111],[lk-cw+0.9,100],[lk-kw,90.4],[lk-kw+0.2,83],[thighIn,72],[0.85,63.1]];
+  const body = crPath([...side.map(([x,y])=>[C+x,y]), [C,62.5], ...side.slice().reverse().map(([x,y])=>[C-x,y])],true);
+  // arms hang straight down beside the body: elbow at the waist, wrist at the crotch, fingertips at mid-thigh
+  const ec=Math.max(sh-0.45, wa+el+1.05), wc=Math.max(ec+0.3, hi+wr+0.9);
+  const outer=[[sh-2.2,22.5],[sh-0.5,23.4],[sh+0.4,25.7],[(sh+0.4+ec+el)/2+0.25,33.5],[ec+el+0.1,43.6],[(ec+el+wc+wr)/2+0.3,50.5],[wc+wr,59.6],[wc+ha+0.15,63.1],[wc+ha-0.15,66.4],[wc+0.35,68.7]];
+  const inner=[[wc-ha+0.5,66.7],[wc-ha+0.3,63.5],[wc-wr,60],[(ec-el+wc-wr)/2-0.05,51.5],[ec-el,44.3],[(ec-el+bu+0.1)/2-0.1,37.4],[bu+0.1,30.6]];
+  const armFill = s => `<path class="paper" d="${crPath([...outer,...inner,[bu-1.2,27],[sh-2.8,24.4]].map(([x,y])=>[C+s*x,y]),true)}"/>`;
+  const armLine = s => `<path class="line" d="${crPath([...outer,...inner].map(([x,y])=>[C+s*x,y]),false)}"/>`;
+  const H = g==="Man" ? [[0,2.5],[3.75,3.55],[5,7.6],[4.8,12],[3.35,15.6],[0,16.9]] : [[0,2.6],[3.6,3.65],[4.8,7.7],[4.4,12.2],[2.75,15.6],[0,16.9]];
+  const head = crPath([...H, ...H.slice(1,-1).reverse().map(([x,y])=>[-x,y])].map(([x,y])=>[C+x,y]),true);
+  // clothing lines: a leotard (as in the reference), or briefs for men
+  let suit = "";
+  if(b.suit==="leotard") suit = `<path d="M${X(-1,3.5)} 21C${X(-1,3.2)} 25.4 ${X(-1,1.5)} 27.4 ${C} 27.4C${X(1,1.5)} 27.4 ${X(1,3.2)} 25.4 ${X(1,3.5)} 21"/>`
+      + both(s=>`<path d="M${X(s,5.3)} 21.6C${X(s,5.6)} 25.6 ${X(s,bu-1.9)} 29.3 ${X(s,bu+0.05)} 30.7"/>`);
+  else suit = `<path d="M${X(-1,hi-0.25)} 52.4Q${C} 53.8 ${X(1,hi-0.25)} 52.4"/>`;
+  suit += both(s=>`<path d="M${X(s,hi-0.1)} ${b.suit==="leotard"?53.2:54.2}C${X(s,hi-2.1)} 57.4 ${X(s,3.6)} 61.2 ${X(s,0.95)} 62.6"/>`);
+  const soft = (g==="Woman" ? both(s=>`<path d="M${X(s,0.7)} 33.2Q${X(s,bu*0.47)} 36.4 ${X(s,bu-1.7)} 32.2"/>`) : "")
+      + both(s=>`<path d="M${X(s,lk-1.1)} 90.6Q${X(s,lk)} 91.5 ${X(s,lk+1.1)} 90.6"/>`);
+  let hairBack="", hairFront="";
+  if(b.hair==="bun"){ hairBack=`<circle class="paper line hair" cx="${C}" cy="2.35" r="2"/>`;
+    hairFront=`<path class="paper line hair" d="${crPath([[C-4.75,9],[C-5.15,5.8],[C-3.85,2.9],[C,1.95],[C+3.85,2.9],[C+5.15,5.8],[C+4.75,9],[C+3.95,6.4],[C+2.05,5.15],[C,4.9],[C-2.05,5.15],[C-3.95,6.4]],true)}"/>`; }
+  if(b.hair==="short") hairFront=`<path class="paper line hair" d="${crPath([[C-5.1,8.4],[C-5.25,5],[C-3.25,2.25],[C,1.7],[C+3.25,2.25],[C+5.25,5],[C+5.1,8.4],[C+4.35,6.3],[C+1.6,5.1],[C-2.3,5.3],[C-4.35,6.4]],true)}"/>`;
+  const top=22.6, bot=61, crotch=62.6, neck=19.8, waist=44;
+  const shape = {
+    tri:  `<path d="M${C} ${neck}L${X(1,hi+1.1)} ${bot}L${X(-1,hi+1.1)} ${bot}Z"/>`,
+    inv:  `<path d="M${X(-1,sh+0.7)} ${top}L${X(1,sh+0.7)} ${top}L${C} ${crotch}Z"/>`,
+    rect: `<path d="M${X(-1,sh)} ${top}H${X(1,sh)}V${bot}H${X(-1,sh)}Z"/>`,
+    trap: `<path d="M${X(-1,sh+0.4)} ${top}L${X(1,sh+0.4)} ${top}L${X(1,hi+0.3)} ${bot}L${X(-1,hi+0.3)} ${bot}Z"/>`,
+    hour: `<path d="M${X(-1,sh+0.4)} ${top}L${X(1,sh+0.4)} ${top}L${C} ${waist}ZM${C} ${waist}L${X(1,hi+0.6)} ${bot}L${X(-1,hi+0.6)} ${bot}Z"/>`,
+    dia:  `<path d="M${C} ${neck}L${X(1,wa+1.6)} ${waist-0.6}L${C} ${crotch}L${X(-1,wa+1.6)} ${waist-0.6}Z"/>`,
+    tube: `<path d="M${X(-1,Math.max(wa,hi)+0.7)} ${top+2}H${X(1,Math.max(wa,hi)+0.7)}V${bot}H${X(-1,Math.max(wa,hi)+0.7)}Z"/>`,
+    round:`<circle cx="${C}" cy="41.6" r="${ff(Math.max(bu,wa,hi)+2.1)}"/>`
+  }[type] || "";
+  return `<svg class="fig" viewBox="9 0 46 129" aria-hidden="true">${hairBack}<path class="paper line" d="${body}"/><g class="fine">${suit}</g><g class="faint">${soft}</g>`
+    + `${armFill(1)}${armFill(-1)}${armLine(1)}${armLine(-1)}<path class="paper line" d="${head}"/>${hairFront}<g class="shape">${shape}</g></svg>`;
+}
+const BUILDS = [["Not really","Not athletic"],["Somewhat","Somewhat athletic"],["Very","Very athletic"]];
+const FITS = ["Slim","Regular","Loose"];
+const SWIPE_ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
+// the group's layout: body shape as cards you swipe through (the next card peeks in at the edge), then build and fit as three text cards each
+V.questions = () => { const p=S.profile, g=figGender(p.gender);
+  const card = (cls,k,v,label,svg="") => `<button class="${cls}" data-a="pick" data-k="${k}" data-v="${v}" aria-pressed="${p[k]===v}">${svg}<span>${label}</span><i class="tick" aria-hidden="true">${CHECK}</i></button>`;
+  return `${optHead(5,"A few questions","questions")}
+  <div class="q-sec"><div class="q-head"><b class="q-lab" id="q-shape">Body shape</b><span class="swipe-hint${S.swiped?" gone":""}">Swipe for more ${SWIPE_ARROW}</span></div>
+    <div class="hrow" data-row="shape" role="group" aria-labelledby="q-shape">${FIG_SHAPES[g].map(([v,w,t])=>card("pcard","shape",v,v,figure(g,w,t))).join("")}</div></div>
+  <div class="q-sec"><b class="q-lab" id="q-build">Your build</b>
+    <div class="sq3" role="group" aria-labelledby="q-build">${BUILDS.map(([v,l])=>card("scard","athletic",v,l)).join("")}</div></div>
+  <div class="q-sec"><b class="q-lab" id="q-fit">Desired fit</b>
+    <div class="sq3" role="group" aria-labelledby="q-fit">${FITS.map(v=>card("scard","fit",v,v)).join("")}</div></div>
+  ${dock(`<button class="btn accent" data-a="questionsDone">Save answers</button>${skipBtn(5)}`)}`; };
+
+V.history = () => { const h=S.hist; const b=BRANDS[h.brand];
+  return `${optHead(6,"Purchase history","history")}
+  <div class="field"><label for="h-brand">Brand</label><select id="h-brand" data-h="brand" class="${h.brand?"":"empty"}"><option value="">Choose a brand</option>${Object.keys(BRANDS).map(x=>`<option ${x===h.brand?"selected":""}>${esc(x)}</option>`).join("")}</select></div>
+  <div class="grid2">
+    <div class="field"><label for="h-model">Model</label><select id="h-model" data-h="model" class="${h.model?"":"empty"}" ${b?"":"disabled"}><option value="">Choose a model</option>${b?b.models.map(x=>`<option ${x===h.model?"selected":""}>${esc(x)}</option>`).join(""):""}</select></div>
+    <div class="field"><label for="h-size">Size</label><select id="h-size" data-h="size" class="${h.size?"":"empty"}" ${h.model?"":"disabled"}><option value="">Choose a size</option>${b?b.sizes.map(x=>`<option ${x===h.size?"selected":""}>${esc(x)}</option>`).join(""):""}</select></div>
+  </div>
+  <div class="chips">${["Kept","Too small","Too big"].map(o=>`<button class="chip" data-a="outcome" data-v="${o}" aria-pressed="${h.outcome===o}">${o==="Kept"?"Kept it":"Returned: "+o.toLowerCase()}</button>`).join("")}</div>
+  <button class="btn ghost" data-a="addHist" ${h.size?"":"disabled"}>Add to history</button>
+  ${S.history.length?`<div class="card col" style="gap:8px">${S.history.map(x=>`<div class="row" style="font-size:14px"><b>${esc(x.brand)} ${esc(x.model)}</b><span class="spacer"></span><span class="mono">${esc(x.size)}</span><span class="tag ${x.outcome==="Kept"?"good":"warn"}">${x.outcome==="Kept"?"kept":esc(x.outcome.toLowerCase())}</span></div>`).join("")}</div>`:""}
+  ${dock(`<button class="btn accent" data-a="historyDone" ${S.history.length?"":"disabled"}>${S.returnTo?"Save":"Finish setup"}</button>${skipBtn(6)}`)}`; };
+
+/* ---------- main app ---------- */
+function appHead(title){
+  return `<div class="app-head"><div class="brandmark"><i>S&amp;F</i>${title}</div>
+    <button class="menu-btn" data-a="openMenu" aria-label="Open menu" aria-haspopup="dialog" aria-expanded="${S.menuOpen}">${icon.menu}${accuracy()<100?'<span class="dot" aria-hidden="true"></span>':""}</button></div>`;
+}
+
+V.main = () => (S.tab==="wizard"?wizardHome():S.tab==="room"?room():styles());
+
+function wizardHome(){
+  const methods = [["share",icon.share,"Share from another app","Tap share in Zalando, Vinted or H&M"],["link",icon.link,"Paste a link","From any shop's website"],["screenshot",icon.image,"Upload screenshots","Of the product page or size chart"]];
+  const recent = (S.recent||[]).slice(0,3);
+  return `${appHead("Size Wizard")}
+    ${S.example?`<p class="tag warn" style="align-self:flex-start">Example profile loaded for this test</p>`:""}
+    <div class="col" style="gap:4px"><h1 class="h1">Which size should I buy?</h1><p class="sub">Spotted something you like? Share it and we'll find your size.</p></div>
+    <div class="col">${methods.map(([k,ic,t,d])=>`<button class="method go" data-a="method" data-v="${k}"><span class="ic">${ic}</span><span><b>${t}</b><span>${d}</span></span><span class="chev">${icon.chevR}</span></button>`).join("")}</div>
+    ${recent.length?`<div class="col" style="gap:4px"><span class="eyebrow">Recent checks</span>${recent.map(r=>{const it=ITEMS[r.id];return `<button class="recent" data-a="openResult" data-id="${r.id}"><span class="thumb">${garm(it.type,it.color)}</span><span class="meta"><b>${esc(it.brand)} ${esc(it.model)}</b>${esc(r.size)} · ${r.pc}% match</span></button>`}).join("")}</div>`:""}`;
+}
+
+/* each Size Wizard option opens its own page */
+const methodPage = (ic,title,sub,body,dk="") => `<button class="back" data-a="backMain">${icon.chevron} Size Wizard</button>
+  <div class="col mp-head"><span class="mp-ic">${ic}</span><h1 class="h1">${title}</h1><p class="sub">${sub}</p></div>
+  ${body}${dk}`;
+V.mShare = () => methodPage(icon.share,"Share from another app","Tap share in Zalando, Vinted or H&amp;M",
+  `<div class="col mp-body"><span class="eyebrow">Pretend you're in another app</span>
+  ${[["levis","Zalando","Levi's 501 jeans"],["vinted","Vinted","Acne Studios wool coat"],["hm","H&M","Oversized poplin shirt"]].map(([id,app,lab])=>`<button class="sample" data-a="openExt" data-id="${id}"><span class="thumb">${garm(ITEMS[id].type,ITEMS[id].color)}</span><span><b>Open ${app}</b><span>${lab}</span></span></button>`).join("")}</div>`);
+V.mLink = () => methodPage(icon.link,"Paste a link","From any shop's website",
+  `<div class="field"><label for="linkIn">Product link</label><input id="linkIn" data-f="link" value="${esc(S.linkText)}" autocomplete="off"></div>
+  <div class="col mp-body"><span class="eyebrow">Tap to paste an example</span>
+  ${SAMPLE_LINKS.map(l=>`<button class="sample" data-a="pasteLink" data-id="${l.id}"><span class="thumb" style="color:var(--muted)">${icon.link}</span><span><b>${l.label}</b><span>${l.url}</span></span></button>`).join("")}</div>`,
+  dock(`<button class="btn accent" data-a="checkLink" ${S.linkText?"":"disabled"} id="checkBtn">Find my size</button>`));
+V.mShot = () => methodPage(icon.image,"Upload screenshots","Of the product page or size chart",
+  `<div class="col mp-body"><span class="eyebrow">Pick a screenshot from your photos</span>
+  <button class="sample" data-a="shot" data-id="arket"><span class="thumb">${garm("sweater",ITEMS.arket.color)}</span><span><b>Arket product page</b><span>Item name, price and size chart visible</span></span></button>
+  <button class="sample blurred" data-a="shot" data-id="blurry"><span class="thumb">${garm("sweater","#8A8F9A")}</span><span><b>Photo of a jumper</b><span>Taken in a shop, no label</span></span></button></div>`);
+
+V.ext = () => { const it=ITEMS[S.extId]; const app = it.shop;
+  return `<button class="back" data-a="go" data-to="mShare">${icon.chevron} Back to Size &amp; Fit</button>
+  <div class="ext"><div class="bar-top"><span>${esc(app.toUpperCase())}</span><button class="btn small ghost" data-a="openShare" style="gap:6px">${icon.share.replace("<svg","<svg width='16' height='16'")} Share</button></div>
+  <div class="hero">${garm(it.type,it.color)}</div>
+  <div class="col" style="padding:14px;gap:4px"><b>${esc(it.brand)}</b><span>${esc(it.model)}</span><span class="sub">${it.ownFormat?esc(it.ownFormat)+" · 650 kr":"Select size ▾"}</span></div></div>
+  <p class="sub" style="font-size:12.5px">This screen stands in for the shop's own app. Tap Share to send the item to Size &amp; Fit.</p>`; };
+
+V.processing = () => {
+  const it=ITEMS[S.item]; const st=S.proc||0; const fail=S.procFail;
+  const first = it.source==="screenshot" ? "Reading your screenshot" : it.source==="share" ? "Receiving the item" : "Opening the link";
+  const steps=[first,"Finding the size chart on the web","Building the item profile","Comparing with your fit profile"];
+  return `<div class="spacer"></div>
+  <div class="col" style="gap:6px"><span class="eyebrow">Size Wizard</span><h1 class="h1">Finding your size${S.profile.name?`, ${esc(S.profile.name)}`:""}…</h1></div>
+  <div class="proc"><ul>${steps.map((s,i)=>`<li class="${i<st?"done":i===st?(fail?"fail":"now"):""}"><span class="dot">${i<st?"✓":i===st&&fail?"!":""}</span>${s}</li>`).join("")}</ul></div>
+  <div class="spacer"></div><div class="spacer"></div>`;
+};
+
+V.errFormat = () => `
+  <button class="back" data-a="backMain">${icon.chevron} Size Wizard</button>
+  <span class="err-ic">${icon.alert}</span>
+  <h1 class="h2">This shop's page won't open for us</h1>
+  <p class="sub">No worries, a screenshot or a few details work just as well.</p>
+  <div class="card col" style="gap:4px"><span class="eyebrow">Your link</span><span class="mono" style="font-size:12px;word-break:break-all">${esc(ITEMS[S.item].url||S.linkText)}</span></div>
+  <div class="col">
+    <button class="method" data-a="recoverShot"><span class="ic">${icon.image}</span><span><b>Upload a screenshot instead</b><span>Of the product page and its size chart</span></span></button>
+    <button class="method" data-a="recoverManual"><span class="ic">${icon.link}</span><span><b>Type the details</b><span>Brand, item and the sizes on offer</span></span></button>
+  </div>
+  <div class="spacer"></div><button class="btn ghost" data-a="checkLink">Try the link again</button>`;
+
+V.recoverShot = () => `
+  <button class="back" data-a="backErr">${icon.chevron} Back</button>
+  <h1 class="h2">Pick a screenshot</h1><p class="sub">Include the item name and the size chart if the page has one.</p>
+  <button class="sample" data-a="shotBoutique"><span class="thumb">${garm("blouse",ITEMS.boutique.color)}</span><span><b>Atelier Nord, product page</b><span>Linen wrap blouse, size chart below the photo</span></span></button>`;
+
+const manualOk = () => !!(S.man.b.trim() && S.man.i.trim());
+V.recoverManual = () => `
+  <button class="back" data-a="backErr">${icon.chevron} Back</button>
+  <h1 class="h2">Tell us about the item</h1>
+  <div class="field"><label for="r-b">Brand or shop</label><input id="r-b" data-m="b" value="${esc(S.man.b)}" autocomplete="off"></div>
+  <div class="field"><label for="r-i">Item</label><input id="r-i" data-m="i" value="${esc(S.man.i)}" autocomplete="off"></div>
+  <div class="field"><label for="r-s">Sizes on offer <span style="font-weight:500">(optional)</span></label><input id="r-s" data-m="s" value="${esc(S.man.s)}" autocomplete="off"></div>
+  <button class="btn link" data-a="fillManual" style="align-self:flex-start;padding-left:0">Fill with example answers</button>
+  <p class="sub" style="font-size:13px">Without a size chart the match is less certain. Adding a screenshot of the chart helps.</p>
+  <div class="spacer"></div><button class="btn accent" data-a="manualGo" id="manBtn" ${manualOk()?"":"disabled"}>Find my size</button>`;
+
+V.errShot = () => `
+  <button class="back" data-a="backMain">${icon.chevron} Size Wizard</button>
+  <span class="err-ic">${icon.image}</span>
+  <h1 class="h2">This photo doesn't show enough</h1>
+  <p class="sub">We couldn't find a brand, an item name or a size label in it.</p>
+  <div class="card col" style="gap:10px"><span class="eyebrow">A good screenshot shows</span>
+    ${["The item's name and brand","The size chart, or the size you'd pick","For second-hand: the label or the seller's measurements"].map(t=>`<div class="row" style="font-size:14px"><span class="tag good">✓</span>${t}</div>`).join("")}</div>
+  <div class="spacer"></div>
+  <button class="btn accent" data-a="method" data-v="screenshot">Choose another screenshot</button>
+  <button class="btn ghost" data-a="method" data-v="link">Paste a link instead</button>`;
+
+V.conflict = () => `
+  <button class="back" data-a="backMain">${icon.chevron} Size Wizard</button>
+  <span class="err-ic" style="background:var(--blue-soft);color:var(--blue)">${icon.scale}</span>
+  <h1 class="h2">The shop and other shoppers disagree</h1>
+  <p class="sub">H&amp;M's size chart and recent reviews point to different sizes for you.</p>
+  <div class="grid2">
+    <div class="card col" style="gap:4px"><span class="eyebrow">Shop's chart</span><b class="h2">M</b><span class="sub" style="font-size:13px">"True to size"</span></div>
+    <div class="card col" style="gap:4px"><span class="eyebrow">214 reviews</span><b class="h2">S</b><span class="sub" style="font-size:13px">"Runs large, size down"</span></div>
+  </div>
+  <p style="font-weight:600">Which should count more?</p>
+  <div class="col">
+    <button class="btn" data-a="pickConflict" data-v="reviews">Go with the reviews</button>
+    <button class="btn ghost" data-a="pickConflict" data-v="shop">Go with the shop's chart</button>
+  </div>`;
+
+const TUNE=["Much tighter","Tighter","As designed","Looser","Much looser"];
+function sizesHTML(list){
+  return list.slice(0,1).map((x,i)=>`<div class="size ${i===0?"best":""}"><div class="top"><span class="nm">${esc(x.s)}${i===0?' <span class="tag good" style="vertical-align:middle">Best match</span>':""}</span><span class="pc">${x.pc}%</span></div><div class="bar"><i style="width:${x.pc}%"></i></div></div>`).join("");
+}
+function matches(id){
+  const it=ITEMS[id]; const a=accuracy();
+  const pref = {Slim:-.5,Regular:0,Loose:.5}[S.profile.fit]||0;
+  let shift = 0;
+  if(id==="hm"){ shift = S.conflictPick==="reviews"?-1:S.conflictPick==="shop"?0:-.5; }
+  const t = it.best + it.bias + S.tune*.5 + pref*.4 + shift;
+  const cap = 66 + .3*a;
+  return it.sizes.map((s,o)=>({s,pc:Math.max(4,Math.min(97,Math.round(cap-44*Math.abs(o-t))))}))
+    .sort((x,y)=>y.pc-x.pc);
+}
+
+V.result = () => {
+  const id=S.item, it=ITEMS[id], list=matches(id), a=accuracy();
+  const tuneLab = ["Much tighter","Tighter","As designed","Looser","Much looser"][S.tune+2];
+  return `<button class="back" data-a="${S.origin==="styles"?"backLook":"backMain"}">${icon.chevron} ${S.origin==="styles"?"Back to the look":"Size Wizard"}</button>
+  <div class="item-head"><span class="item-img">${garm(it.type,it.color)}</span><div class="col" style="gap:2px;min-width:0"><span class="eyebrow">${esc(it.shop)}</span><b class="h3">${esc(it.brand)}</b><span class="sub">${esc(it.model)}</span></div></div>
+  <div class="row" style="flex-wrap:wrap;gap:6px"><span class="tag">${esc(it.fit)}</span><span class="tag">${esc(it.material)}</span>${id==="hm"?`<span class="tag warn">Mixed signals: ${S.conflictPick==="reviews"?"reviews weighed more":S.conflictPick==="shop"?"shop chart weighed more":"weighed equally"}</span>`:""}${S.manual?`<span class="tag warn">No size chart: estimate</span>`:""}</div>
+  <div class="col" style="gap:4px"><span class="eyebrow">Your size, in ${id==="vinted"?"this coat's own EU sizes":"the shop's own sizes"}</span></div>
+  <div class="sizes" id="sizes">${sizesHTML(list)}</div>
+  <div class="card col" style="gap:8px">
+    <div class="row"><b style="font-size:14.5px">Fine-tune the fit</b><span class="spacer"></span><span class="tag pink" id="tuneLab">${tuneLab}</span></div>
+    <input type="range" id="tune" min="-2" max="2" step="1" value="${S.tune}" aria-label="How you want this item to fit">
+    <div class="tune-labels"><span>Tighter</span><span>As designed</span><span>Looser</span></div>
+  </div>
+  <div class="col" style="gap:8px"><b style="font-size:14.5px" id="whyHead">Why ${esc(list[0].s)}</b><ul class="why">${it.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul></div>
+  ${a<70?`<button class="tip" style="border:0;text-align:left" data-a="nav" data-to="profile"><b>${a}%</b><span>Your fit profile is ${a}% complete. Add ${!S.steps.scan?"a scan":!S.steps.meas?"measurements":"your purchase history"} to raise these matches.</span></button>`:""}
+  <div class="grid2"><button class="btn ghost" data-a="saveRoom">Save to Fitting Room</button><button class="btn accent" data-a="toShop">Buy ${esc(list[0].s)}</button></div>`;
+};
+
+V.profile = () => {
+  const s=S.steps, p=S.profile;
+  const rows=[
+    ["basic","Personal details",[p.gender,p.age&&`${p.age} yrs`,p.height&&`${p.height} cm`,p.weight&&`${p.weight} kg`].filter(Boolean).join(" · ")||"Name, gender, age, height, weight","personal",35],
+    ["scan","AI scan",s.scan?"Measured from a photo":"Measures what you can't reach","scan",20],
+    ["meas","Measurements",["waist","hips","chest","inseam"].filter(k=>p[k]).map(k=>`${k} ${p[k]}`).join(" · ")||"Waist, hips, chest, inseam","meas",20],
+    ["questions","Body shape and build",[p.shape,p.athletic&&`${p.athletic.toLowerCase()} athletic`].filter(Boolean).join(" · ")||"Shape and how athletic you are","questions",10],
+    ["history","Purchase history",`${S.history.length} item${S.history.length===1?"":"s"}`,"history",15]];
+  return `${setHead("Your fit profile","Everything the app uses to find your size. The longer the tape, the more certain your matches.")}
+  ${tape()}
+  <div class="slist">${rows.map(([k,t,d,to,pts])=>`<div class="srow"><span class="sl"><b>${t}</b><span>${esc(d)}</span></span>
+    ${s[k]?`<span class="tag good mono">+${pts}</span><button class="btn small ghost" data-a="${k==="basic"?"nav":"addStep"}" data-to="${to}">Edit</button>`
+          :`<button class="btn small" data-a="addStep" data-to="${to}">Add +${pts}</button>`}</div>`).join("")}</div>
+  <div class="col" style="gap:8px"><b style="font-size:14.5px">Desired fit</b><p class="sub" style="font-size:13.5px">Every result starts from this. You can still fine-tune each item.</p>
+    <div class="chips">${["Slim","Regular","Loose"].map(o=>`<button class="chip" data-a="pick" data-k="fit" data-v="${o}" aria-pressed="${p.fit===o}">${o}</button>`).join("")}</div></div>`;
+};
+
+/* fitting room */
+/* Fitting Room and Styles are not ready yet: the page is blurred behind a swinging hanger */
+const HANGER_BIG = '<svg class="hanger" viewBox="2 2 20 17.5" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7a2 2 0 1 1 2-2c0 1.5-2 2-2 3.5V9L3 16a1.5 1.5 0 0 0 1 2.5h16a1.5 1.5 0 0 0 1-2.5L12 9"/></svg>';
+const comingSoon = inner => `<div class="soon-area"><div class="soon-blur" inert aria-hidden="true">${inner}</div><div class="soon">${HANGER_BIG}<b>Coming<br>soon</b></div></div>`;
+function room(){
+  const zones=[["all","All"],["inner","Inner layer"],["mid","Mid layer"],["outer","Jackets"],["lower","Lower body"]];
+  const items=S.closet.filter(c=>S.filter==="all"||c.zone===S.filter);
+  const o=S.outfit; const count=Object.values(o).filter(Boolean).length;
+  const slot=(z,l)=>{const c=S.closet.find(x=>x.id===o[z]);return `<div class="slot ${c?"full":""}">${c?garm(c.type,c.color):l}</div>`};
+  return `${appHead("Fitting Room")}${comingSoon(`
+  <div class="col" style="gap:4px"><h1 class="h1">Your closet</h1><p class="sub">Tap clothes to try them together.</p></div>
+  <div class="outfit-stage" aria-label="Outfit">${slot("inner","Inner layer")}${slot("mid","Mid layer")}${slot("outer","Jacket")}${slot("lower","Lower body")}</div>
+  ${count>=2?`<button class="btn accent" data-a="saveOutfit">Save outfit</button>`:`<p class="sub" style="font-size:13px;text-align:center">Pick at least a top and a bottom.</p>`}
+  <div class="chips" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">${zones.map(([k,l])=>`<button class="chip" style="flex:0 0 auto" data-a="filter" data-v="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join("")}</div>
+  <div class="rail">${items.map(c=>`<div class="garm" role="button" tabindex="0" data-a="wear" data-id="${c.id}" aria-pressed="${o[c.zone]===c.id}">${garm(c.type,c.color)}<small>${esc(c.name)}</small><button class="more" data-a="itemMenu" data-id="${c.id}" aria-label="More about ${esc(c.name)}">⋯</button></div>`).join("")}
+    <button class="garm" data-a="addItem" style="justify-content:center;color:var(--muted)"><span style="font-size:28px;line-height:1">+</span><small>Add item</small></button></div>`)}`;
+}
+
+/* styles */
+const LOOKS=[
+  {id:"l1",by:"@linnea.layers",title:"Corduroy for October",bg:"#E9D9C6",items:[["jacket","#A0673A","Our Legacy","Overshirt in corduroy","100% cotton corduroy","48","styles_jacket"],["tee","#F2F0EA","Uniqlo","Supima crew tee","100% Supima cotton","M",null],["chinos","#4A4A3E","Arket","Wide twill trousers","98% cotton","W31",null]]},
+  {id:"l2",by:"@sofia.secondhand",title:"All second-hand, all fits",bg:"#D7DEE8",items:[["sweater","#3A5A80","COS","Chunky wool jumper","100% wool","S",null],["skirt","#2E2E38","Vintage","Pleated midi skirt","Wool blend","36",null]]},
+  {id:"l3",by:"@noah.fits",title:"Office, but relaxed",bg:"#E3E6D5",items:[["shirt","#F0EDE4","H&M","Oversized poplin shirt","100% cotton poplin","L","hm"],["jeans","#2F4A75","Levi's","501 Original","100% cotton denim","W32 L34","levis"]]},
+  {id:"l4",by:"@amira.wears",title:"Linen, last warm days",bg:"#EADFD3",items:[["blouse","#C9A27E","Atelier Nord","Linen wrap blouse","100% linen","38",null],["skirt","#6E7F5C","& Other Stories","Midi skirt","Viscose","36",null]]}
+];
+function styles(){
+  return `${appHead("Styles")}${comingSoon(`
+  <div class="col" style="gap:4px"><h1 class="h1">Looks to steal</h1><p class="sub">Outfits from people with a profile like yours.</p></div>
+  <div class="feed">${LOOKS.map(l=>`<button class="post" data-a="openLook" data-id="${l.id}"><span class="pic" style="background:${l.bg}">${garm(l.items[0][0],l.items[0][1])}</span><b>${esc(l.title)}</b><span>${esc(l.by)}</span></button>`).join("")}</div>
+  <p class="sub" style="font-size:12px">Creators and looks are made-up examples.</p>`)}`;
+}
+V.look = () => { const l=LOOKS.find(x=>x.id===S.look);
+  return `<button class="back" data-a="backMain">${icon.chevron} Styles</button>
+  <div class="post" style="pointer-events:none"><span class="pic" style="background:${l.bg};aspect-ratio:4/3">${garm(l.items[0][0],l.items[0][1])}</span></div>
+  <div class="col" style="gap:2px"><h1 class="h2">${esc(l.title)}</h1><span class="sub">${esc(l.by)}</span></div>
+  <div class="col" style="gap:12px"><span class="eyebrow">Shop the look</span>
+  ${l.items.map(([t,c,b,m,mat,sz,link])=>{
+    const yours = link ? matches(link)[0] : null;
+    return `<div class="look-item"><span class="thumb">${garm(t,c)}</span><span class="meta"><b>${esc(b)} · ${esc(m)}</b>${esc(mat)} · they wear ${esc(sz)}</span>
+    ${yours?`<button class="yoursize" data-a="lookSize" data-id="${link}">Your size</button>`:`<button class="yoursize" style="background:var(--sunk);color:var(--muted)" data-a="noData">Your size</button>`}</div>`;}).join("")}</div>`; };
+
+/* ---------- menu and settings ---------- */
+function navTo(to){ S.stack.push(S.menuOpen ? "menu" : S.screen); S.menuOpen=false; go(to); }
+function navBack(){ const prev=S.stack.pop()||"menu"; if(prev==="menu"){ S.screen="main"; S.menuOpen=true; render(); } else go(prev); }
+const navBackBtn = () => `<button class="back" data-a="navBack">${icon.chevron} ${!S.stack.length||S.stack[S.stack.length-1]==="menu"?"Menu":"Back"}</button>`;
+const setHead = (title,sub) => `${navBackBtn()}<div class="col" style="gap:4px"><h1 class="h1">${title}</h1>${sub?`<p class="sub">${sub}</p>`:""}</div>`;
+const sw = (k,on,label,disabled) => `<button class="switch" role="switch" aria-checked="${!!on}" aria-label="${esc(label)}" data-a="toggle" data-k="${esc(k)}" ${disabled?"disabled":""}></button>`;
+const photoArt = () => `<svg viewBox="0 0 60 60" aria-hidden="true"><rect width="60" height="60" fill="#D9C7B6"/><circle cx="30" cy="23" r="10" fill="#6E5241"/><path d="M9 60c2-12 10-19 21-19s19 7 21 19z" fill="#6E5241"/></svg>`;
+const chartsPref = () => S.prefs.charts || ({Woman:"Women's",Man:"Men's"}[S.profile.gender] || "Both");
+const SHOPS = ["Zalando","Boozt","ASOS","Atelier Nord"], RESALE = ["Sellpy","Vinted","Tradera"];
+const shopMark = n => n.split(" ").map(w=>w[0]).join("");
+const connectedCount = () => SHOPS.filter(n=>S.prefs.shops[n]==="on").length + RESALE.filter(n=>S.prefs.resale[n]).length;
+const ZALANDO_ORDERS = [{brand:"Levi's",model:"501 Original",size:"W30 L32",outcome:"Kept"},{brand:"Levi's",model:"511 Slim",size:"W31 L32",outcome:"Too big"},{brand:"Arket",model:"Merino crew",size:"M",outcome:"Kept"}];
+const NOTIF = [["looks","New looks in Styles","Outfits from people with a profile like yours"],["profile","Profile reminders","When a step would sharpen your matches"],["resale","Resale updates","When an item you listed sells or gets an offer"],["tips","Tips","Short tips for better matches"]];
+
+const MENU = () => [
+  ["Fit profile",[
+    ["profile",icon.ruler,"Your fit profile",`${accuracy()}% complete`],
+    ["personal",icon.user,"Personal details",[S.profile.gender,S.profile.age&&`${S.profile.age} yrs`,S.profile.height&&`${S.profile.height} cm`].filter(Boolean).join(" · ")||"Name, gender, age, height, weight, photo"]]],
+  ["Shopping",[
+    ["shops",icon.bag,"Connected shops",connectedCount()?`${connectedCount()} connected`:"Import your past orders"],
+    ["sizes",icon.tag,"Sizes and units",`${chartsPref()} charts · ${S.prefs.units}`]]],
+  ["App",[
+    ["appearance",icon.sun,"Appearance",{light:"Light",dark:"Dark"}[appTheme]||"Match device"],
+    ["notifications",icon.bell,"Notifications",`${Object.values(S.prefs.notif).filter(Boolean).length} of ${NOTIF.length} on`],
+    ["language",icon.globe,"Language",S.prefs.lang]]],
+  ["Privacy",[
+    ["privacy",icon.lock,"Privacy and data","Photos, data sharing, your account"]]],
+  ["Help",[
+    ["howitworks",icon.info,"How we find your size","Your profile, the item, the match"],
+    ["feedback",icon.chat,"Send feedback","Tell us what to fix or add"],
+    ["about",icon.about,"About","Version 4"]]]
+];
+function drawerHTML(){
+  const p=S.profile, a=accuracy();
+  return `<div class="drawer" role="dialog" aria-label="Menu">
+    <button class="scrim" data-a="closeMenu" aria-label="Close menu" tabindex="-1"></button>
+    <div class="panel">
+      <div class="phead"><span class="eyebrow" style="flex:1">Menu</span><button class="icon-btn" id="menuClose" data-a="closeMenu" aria-label="Close menu">${icon.close}</button></div>
+      <div class="pbody">
+      <button class="me" data-a="nav" data-to="personal"><span class="avatar">${S.prefs.photo?photoArt():esc((p.name||"Y")[0].toUpperCase())}</span><span class="ml"><b>${esc(p.name||"You")}</b><span>Signed in with ${esc(S.provider)}</span></span><span class="chev">${icon.chevR}</span></button>
+      <div class="card col" style="gap:10px;padding:14px">${tape()}<button class="btn small ${a<100?"accent":"ghost"}" style="width:100%" data-a="nav" data-to="profile">${a<100?"Make my profile sharper":"View my fit profile"}</button></div>
+      ${MENU().map(([g,rows])=>`<div class="mgroup"><span class="eyebrow">${g}</span>${rows.map(([to,ic,l,sub])=>`<button class="mrow" data-a="nav" data-to="${to}"><span class="mi">${ic}</span><span class="ml"><b>${l}</b><span>${esc(sub)}</span></span><span class="chev">${icon.chevR}</span></button>`).join("")}</div>`).join("")}
+      <button class="mrow danger" data-a="logout"><span class="mi">${icon.logout}</span><span class="ml"><b>Log out</b></span></button>
+    </div><div class="vrail" hidden aria-hidden="true"><b></b></div></div></div>`;
+}
+
+V.personal = () => { const p=S.profile;
+  const fld=(k,l,u)=>`<div class="field"><label for="p-${k}">${l}</label><div class="unit"><input id="p-${k}" data-f="${k}" inputmode="numeric" value="${esc(p[k])}"><span>${u}</span></div></div>`;
+  return `${setHead("Personal details")}
+  <div class="slist"><button class="srow" data-a="nav" data-to="photo"><span class="avatar sm">${S.prefs.photo?photoArt():esc((p.name||"Y")[0].toUpperCase())}</span><span class="sl"><b>Your photo</b><span>${S.prefs.photo?"Added · used in the Fitting Room":"Optional, for trying outfits on in the Fitting Room"}</span></span><span class="chev">${icon.chevR}</span></button></div>
+  <div class="field"><label for="p-name">Name</label><input id="p-name" data-f="name" value="${esc(p.name)}" autocomplete="off"></div>
+  <div class="col" style="gap:8px"><span class="flabel" id="pg-lab">Gender</span><div class="chips" role="group" aria-labelledby="pg-lab">${GENDERS.map(o=>`<button class="chip" data-a="pick" data-k="gender" data-v="${o}" aria-pressed="${p.gender===o}">${o}</button>`).join("")}</div></div>
+  <div class="grid2">${fld("age","Age","yrs")}${fld("height","Height","cm")}${fld("weight","Weight","kg")}</div>
+  <div class="slist"><div class="srow"><span class="sl"><b>Account</b><span>Signed in with ${esc(S.provider)}</span></span></div></div>
+  ${dock(`<button class="btn accent" data-a="savePersonal">Save</button>`)}`;
+};
+
+V.photo = () => { const has=S.prefs.photo;
+  const empty=`<svg viewBox="0 0 100 220" aria-hidden="true"><g fill="none" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="6 6" stroke-linejoin="round"><circle cx="50" cy="40" r="18"/><path d="M14 210c3-50 16-120 36-120s33 70 36 120"/></g></svg>`;
+  return `${setHead("Your photo","Optional. Try outfits on yourself in the Fitting Room. Only you can see your photo.")}
+  <div class="photo-box">${has?photoArt():empty}</div>
+  ${has?`<div class="grid2"><button class="btn ghost" data-a="photo" data-v="add">Replace</button><button class="btn ghost" data-a="photo" data-v="remove">Remove</button></div>`
+       :`<div class="grid2"><button class="btn" data-a="photo" data-v="add">Take a photo</button><button class="btn ghost" data-a="photo" data-v="add">Choose one</button></div>`}
+  <div class="slist"><div class="srow"><span class="sl"><b>Show me in the Fitting Room</b><span>${has?"Outfits appear on your photo.":"Add a photo to turn this on."}</span></span>${sw("photoInRoom",has&&S.prefs.photoInRoom,"Show me in the Fitting Room",!has)}</div></div>
+  <p class="sub" style="font-size:12.5px">Prototype: no camera is used. Tapping a button adds a sample photo.</p>`;
+};
+
+function shopSub(n){
+  const st=S.prefs.shops[n];
+  if(st==="loading") return `<span>Connecting and importing orders…</span>`;
+  if(st==="on") return `<span>${n==="Zalando"?"Connected · 3 orders imported":"Connected · no orders found yet"}</span>`;
+  if(st==="error") return `<span class="warn-text">We can't read ${esc(n)}'s order format yet.</span><button class="btn link" style="width:auto;padding:4px 0;align-self:flex-start;color:var(--accent)" data-a="histFromShops">Add items by hand instead</button>`;
+  return `<span>Import your past orders</span>`;
+}
+V.shops = () => `${setHead("Connected shops","Connect the shops you buy from. Past orders, and whether you kept them, fill your purchase history.")}
+  <span class="eyebrow">Shops</span>
+  <div class="slist">${SHOPS.map(n=>`<div class="srow"><span class="shop-mark">${shopMark(n)}</span><span class="sl"><b>${esc(n)}</b>${shopSub(n)}</span>${sw("shops."+n,["on","loading"].includes(S.prefs.shops[n]),"Connect "+n)}</div>`).join("")}</div>
+  <span class="eyebrow">Second-hand</span>
+  <div class="slist">${RESALE.map(n=>`<div class="srow"><span class="shop-mark">${shopMark(n)}</span><span class="sl"><b>${esc(n)}</b><span>${S.prefs.resale[n]?"Connected · sell in one tap from your Fitting Room":"For one-tap resale"}</span></span>${sw("resale."+n,S.prefs.resale[n],"Connect "+n)}</div>`).join("")}</div>`;
+
+V.sizes = () => { const P=S.prefs;
+  const grp=(k,label,help,opts,cur)=>`<div class="col" style="gap:8px"><b style="font-size:14.5px">${label}</b>${help?`<p class="sub" style="font-size:13px">${help}</p>`:""}<div class="chips">${opts.map(o=>`<button class="chip" data-a="pref" data-k="${k}" data-v="${o}" aria-pressed="${cur===o}">${o}</button>`).join("")}</div></div>`;
+  return `${setHead("Sizes and units")}
+  ${grp("charts","Size charts to compare","Set from your gender answer. Choose Both if you shop from both.",["Women's","Men's","Both"],chartsPref())}
+  ${grp("sizeAs","Show my size as","The shop's own size is the one you pick at checkout.",["The shop's own sizes","EU","UK","US"],P.sizeAs)}
+  ${grp("units","Measurements in","",["cm and kg","inches and pounds"],P.units)}`;
+};
+
+V.appearance = () => { const cur=appTheme||"device";
+  return `${setHead("Appearance")}
+  <div class="col" style="gap:8px"><b style="font-size:14.5px">Theme</b><div class="chips">${[["light","Light"],["dark","Dark"],["device","Match device"]].map(([k,l])=>`<button class="chip" data-a="setTheme" data-v="${k}" aria-pressed="${cur===k}">${l}</button>`).join("")}</div>
+  <p class="sub" style="font-size:13px">Match device follows your phone's light or dark setting.</p></div>`;
+};
+
+V.notifications = () => `${setHead("Notifications","Choose what the app may tell you about.")}
+  <div class="slist">${NOTIF.map(([k,t,d])=>`<div class="srow"><span class="sl"><b>${t}</b><span>${d}</span></span>${sw("notif."+k,S.prefs.notif[k],t)}</div>`).join("")}</div>`;
+
+V.language = () => `${setHead("Language")}
+  <div class="slist">${["English","Svenska"].map(l=>`<button class="srow" data-a="pref" data-k="lang" data-v="${l}" aria-pressed="${S.prefs.lang===l}"><span class="sl"><b>${l}</b></span>${S.prefs.lang===l?'<span class="tag good">Selected</span>':""}</button>`).join("")}</div>
+  <p class="sub" style="font-size:12.5px">Prototype: the app stays in English.</p>`;
+
+V.privacy = () => `${setHead("Privacy and data")}
+  <div class="slist">
+    <div class="srow"><span class="sl"><b>Help improve matches</b><span>Share your fit results anonymously, so people with a profile like yours get better sizes.</span></span>${sw("share",S.prefs.share,"Help improve matches")}</div>
+    <div class="srow"><span class="sl"><b>Keep my scan photos</b><span>When this is off, photos are deleted right after measuring.</span></span>${sw("keepPhotos",S.prefs.keepPhotos,"Keep my scan photos")}</div>
+  </div>
+  <div class="slist">
+    <button class="srow" data-a="download"><span class="sl"><b>Download my data</b><span>Your profile, measurements and purchase history</span></span><span class="chev">${icon.chevR}</span></button>
+    <button class="srow" data-a="delScan" ${S.steps.scan?"":"disabled"}><span class="sl"><b>Delete my scan</b><span>${S.steps.scan?"Removes the AI scan from your fit profile":"No scan saved"}</span></span><span class="chev">${icon.chevR}</span></button>
+    <button class="srow" data-a="delAccount" style="color:var(--bad)"><span class="sl"><b>Delete my account</b><span>Removes your fit profile for good</span></span><span class="chev">${icon.chevR}</span></button>
+  </div>`;
+
+V.howitworks = () => { const a=accuracy();
+  return `${setHead("How we find your size")}
+  <ol class="steps-list">
+    <li><span><b>Your fit profile</b>Your measurements, body shape, how you like clothes to sit, and what you kept or sent back.</span></li>
+    <li><span><b>The item</b>The shop's size chart, found from the link or screenshot you share, plus the cut and the material.</span></li>
+    <li><span><b>The match</b>The app compares the two and checks how the item fitted people with a profile like yours. Each size gets a match percentage.</span></li>
+  </ol>
+  <div class="tip"><b>${a}%</b><span>Your fit profile is ${a}% complete. The more complete it is, the more certain your matches.</span></div>
+  ${a<100?dock(`<button class="btn accent" data-a="nav" data-to="profile">Make my profile sharper</button>`):""}`;
+};
+
+V.feedback = () => `${setHead("Send feedback","Tell us what to fix or add.")}
+  <div class="col" style="gap:8px"><b style="font-size:14.5px">What is it about?</b><div class="chips">${["Something's wrong","A size was off","An idea"].map(o=>`<button class="chip" data-a="pref" data-k="fbType" data-v="${o}" aria-pressed="${S.prefs.fbType===o}">${o}</button>`).join("")}</div></div>
+  <div class="field"><label for="fb-text">Your message</label><textarea id="fb-text">${esc(S.prefs.fbText)}</textarea></div>
+  ${dock(`<button class="btn accent" data-a="sendFeedback">Send feedback</button>`)}`;
+
+V.about = () => `${setHead("About")}
+  <div class="col" style="gap:8px"><div class="brandmark" style="font-size:22px"><i>S&amp;F</i> Size &amp; Fit</div><p class="sub">One fit profile for every shop.</p></div>
+  <div class="slist">
+    <div class="srow"><span class="sl"><b>Version</b><span>4</span></span></div>
+    <div class="srow"><span class="sl"><b>Made by</b><span>Group 3, Agile Making &amp; Prototyping</span></span></div>
+    <div class="srow"><span class="sl"><b>Built from</b><span>The concept brief and the user flows</span></span></div>
+  </div>`;
+
+function toggleShop(n){
+  const st=S.prefs.shops[n];
+  if(st==="loading") return;
+  if(st==="on"||st==="error"){ S.prefs.shops[n]="off"; log(`disconnected ${n}`); render(); return; }
+  S.prefs.shops[n]="loading"; render();
+  const S0=S;
+  setTimeout(()=>{
+    if(S!==S0) return;
+    if(n==="Atelier Nord"){ S.prefs.shops[n]="error"; emit("breaking point: format can't be read (Atelier Nord orders)"); }
+    else {
+      S.prefs.shops[n]="on";
+      if(n==="Zalando" && !S.zalandoImported){ S.zalandoImported=true; S.history.push(...ZALANDO_ORDERS.map(o=>({...o}))); S.steps.history=true; toast("Nice! 3 past orders added."); }
+      emit(`shop_connected:${n}`);
+    }
+    if(S.screen==="shops") render();
+  },1200);
+}
+
+/* ---------- scroll side bars ---------- */
+// the thumb's length shows how much of the content is visible, its position where you are in it
+function syncRail(sc, rail, top, bottom){
+  if(!sc || !rail) return;
+  const over = sc.scrollHeight - sc.clientHeight, H = bottom - top;
+  if(over < 4 || H < 40){ rail.hidden = true; return; }
+  rail.hidden = false; rail.style.top = top+"px"; rail.style.height = H+"px";
+  const th = Math.max(28, H * sc.clientHeight / sc.scrollHeight);
+  rail.firstElementChild.style.height = th+"px";
+  rail.firstElementChild.style.transform = `translateY(${(H-th) * Math.min(1, Math.max(0, sc.scrollTop/over))}px)`;
+}
+function syncRails(){
+  const v=$("#view"), dk=$("#dock");
+  syncRail(v, $("#viewRail"), v.offsetTop+10, (dk.hidden ? v.offsetTop+v.offsetHeight : dk.offsetTop)-10);
+  const pb=$("#drawer .pbody"); if(pb) syncRail(pb, $("#drawer .vrail"), pb.offsetTop+8, pb.offsetTop+pb.offsetHeight-12);
+  const sh=$("#sheet .sheet"); if(sh) syncRail(sh, $("#sheet .vrail"), sh.offsetTop+24, sh.offsetTop+sh.offsetHeight-16);
+}
+// content can change height without a full render (fonts, slider, timers), so watch each scroller's children too
+const railRO = window.ResizeObserver ? new ResizeObserver(()=>syncRails()) : null;
+function watchRails(){
+  if(railRO){ railRO.disconnect();
+    for(const sc of [$("#view"), $("#drawer .pbody"), $("#sheet .sheet")]) if(sc){ railRO.observe(sc); for(const ch of sc.children) railRO.observe(ch); } }
+  syncRails();
+}
+
+/* ---------- render ---------- */
+// scrolls the app makes itself (nudge, keeping a row in place) don't count as the user swiping
+let autoUntil = 0; const autoScroll = (ms=700) => { autoUntil = performance.now()+ms; };
+// once per session the body shape row slides a little and back, to show it can be swiped
+function nudgeRow(r){
+  if(!r || S.nudged || r.scrollWidth<=r.clientWidth+4 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  S.nudged=true;
+  setTimeout(()=>{ if(!r.isConnected || r.scrollLeft) return; autoScroll(1600); r.classList.add("free"); r.scrollTo({left:70,behavior:"smooth"});
+    setTimeout(()=>{ if(r.isConnected) r.scrollTo({left:0,behavior:"smooth"}); },600);
+    setTimeout(()=>{ r.classList.remove("free"); },1400); },800);
+}
+function render(){
+  const view=$("#view"); const scr=S.screen;
+  if(appTheme) $("#screen").dataset.appTheme=appTheme; else delete $("#screen").dataset.appTheme;
+  const keepX = render.last===scr ? [...view.querySelectorAll(".hrow")].map(r=>[r.dataset.row,r.scrollLeft]) : [];
+  view.innerHTML = V[scr]();
+  for(const [k,x] of keepX){ const r=view.querySelector(`.hrow[data-row="${k}"]`); if(r && x){ autoScroll(); r.scrollLeft=x; } }
+  if(scr==="questions" && render.last!=="questions"){ if(active) active.qSeen=true; nudgeRow(view.querySelector(".hrow")); }
+  render.last=scr;
+  view.classList.toggle("has-tabs", scr==="main");
+  $("#drawer").innerHTML = (S.menuOpen && scr==="main") ? drawerHTML() : "";
+  const src=view.querySelector(".dock-src"), dk=$("#dock");
+  if(src){ dk.innerHTML=src.innerHTML; src.remove(); dk.hidden=false; view.style.paddingBottom=(dk.offsetHeight+20)+"px"; }
+  else { dk.innerHTML=""; dk.hidden=true; view.style.paddingBottom=""; }
+  const tb=$("#tabbar");
+  tb.hidden = scr!=="main";
+  if(scr==="main") tb.innerHTML=[["wizard",icon.wand,"Size Wizard"],["room",icon.hanger,"Fitting Room"],["styles",icon.sparkle,"Styles"]]
+    .map(([k,ic,l])=>`<button data-a="tab" data-v="${k}" aria-current="${S.tab===k}">${ic}${l}</button>`).join("");
+  watchRails();
+}
+function go(s){ S.screen=s; render(); $("#view").scrollTop=0; syncRails(); }
+
+function runProcessing(id){
+  S.item=id; S.proc=0; S.procFail=false; S.tune=0; S.manual=false; go("processing");
+  const it=ITEMS[id]; const failAt = it.fails && !S.bypass ? 0 : it.conflict && !S.conflictPick ? 2 : -1;
+  const tick=()=>{
+    if(S.screen!=="processing") return;
+    if(S.proc===failAt){
+      S.procFail=true; render();
+      setTimeout(()=>{
+        if(it.fails==="format"){ S.failedFirst=true; emit("breaking point: format can't be read"); go("errFormat"); }
+        else if(it.fails==="screenshot"){ emit("breaking point: unusable screenshot"); go("errShot"); }
+        else { emit("breaking point: conflicting data"); go("conflict"); }
+      },650); return;
+    }
+    S.proc++; render();
+    if(S.proc>=4){ setTimeout(()=>showResult(id),350); return; }
+    setTimeout(tick,600);
+  };
+  setTimeout(tick,600);
+}
+function showResult(id){
+  S.item=id; S.bypass=false;
+  const best=matches(id)[0];
+  S.recent=[{id,size:best.s,pc:best.pc},...(S.recent||[]).filter(r=>r.id!==id)];
+  go("result");
+  emit(`result:${id}`);
+  if(id==="boutique" && S.failedFirst) emit("recovered");
+}
+
+/* ---------- interactions ---------- */
+const phone=$("#screen");
+phone.addEventListener("click",e=>{
+  if(active){ active.taps++; const lt=$("#liveTaps"); if(lt) lt.textContent=active.taps+" taps"; }
+  const el=e.target.closest("[data-a]"); if(!el) return;
+  if(el.classList.contains("sheet-bg") && e.target.closest(".sheet")) return;
+  const a=el.dataset.a, v=el.dataset.v, id=el.dataset.id;
+  if(el.dataset.a==="itemMenu") e.stopPropagation();
+  switch(a){
+    case "login": S.provider=v||"Google";
+      if(S.onboarded){ S.screen="main"; S.tab="wizard"; render(); toast(`Welcome back, ${S.profile.name||"you"}`); } else go("basic");
+      break;
+    case "openMenu": S.menuOpen=true; log("menu opened"); render(); { const c=$("#menuClose"); if(c) c.focus(); } break;
+    case "closeMenu": S.menuOpen=false; render(); { const b=$(".menu-btn"); if(b) b.focus(); } break;
+    case "nav": log(`menu: ${el.dataset.to}`); navTo(el.dataset.to); break;
+    case "navBack": navBack(); break;
+    case "toggle": { const k=el.dataset.k, [grp,key]=k.split(".");
+      if(grp==="shops"){ toggleShop(key); break; }
+      const obj = key ? S.prefs[grp] : S.prefs, kk = key || grp;
+      obj[kk]=!obj[kk]; log(`${k}: ${obj[kk]?"on":"off"}`); render(); break; }
+    case "pref": S.prefs[el.dataset.k]=v; log(`${el.dataset.k}: ${v}`); render(); break;
+    case "setTheme": appTheme = v==="device" ? null : v;
+      try{ appTheme ? localStorage.setItem("sf-app-theme",appTheme) : localStorage.removeItem("sf-app-theme"); }catch(e){}
+      log(`app theme: ${v}`); render(); break;
+    case "savePersonal": if(!basicOk(S.profile)){ toast("Fill in every field to save"); break; } toast("Personal details saved"); navBack(); break;
+    case "photo": S.prefs.photo = v==="add"; toast(v==="add"?"Photo added":"Photo removed"); render(); break;
+    case "histFromShops": S.returnTo="shops"; go("history"); break;
+    case "download": toast("Prototype: your data would be prepared for download"); break;
+    case "delScan": S.steps.scan=false; S.scanFrom=false; S.scanState=null; toast("Scan deleted"); render(); break;
+    case "delAccount": sheet(`<b class="h3">Delete your account?</b><p class="sub">Your fit profile, measurements and purchase history are removed for good.</p>
+        <button class="btn" style="background:var(--bad);color:var(--screen)" data-a="confirmDelete">Delete my account</button><button class="btn ghost" data-a="closeSheet">Cancel</button>`); break;
+    case "confirmDelete": sheet(""); S=fresh(); log("account deleted"); render(); toast("Account deleted"); break;
+    case "sendFeedback": { const t=S.prefs.fbText.trim(); if(!t){ toast("Write a message first"); break; }
+      log(`feedback (${S.prefs.fbType}): ${t}`); S.prefs.fbText=""; toast("Thanks, your feedback was sent"); navBack(); break; }
+    case "logout": S.menuOpen=false; render();
+      sheet(`<b class="h3">Log out?</b><p class="sub">Your profile will be here when you're back.</p>
+        <button class="btn accent" data-a="confirmLogout">Log out</button><button class="btn ghost" data-a="closeSheet">Cancel</button>`); break;
+    case "confirmLogout": sheet(""); S.stack=[]; S.menuOpen=false; S.screen="login"; log("logged out"); render(); break;
+    case "theme": appTheme = effectiveTheme()==="dark" ? "light" : "dark"; try{localStorage.setItem("sf-app-theme",appTheme);}catch(e){} log(`app theme: ${appTheme}`); render(); break;
+    case "why": if(active) active.whys=(active.whys||0)+1; log(`why: ${el.dataset.t}`);
+      sheet(`<span class="eyebrow">${esc(el.dataset.t)}</span><b class="h3">Why this helps</b><p style="font-size:15px">${WHY[el.dataset.k]}</p>
+        <button class="btn accent" data-a="closeSheet">Got it</button>`); break;
+    case "fillManual": Object.assign(S.man,{b:"Atelier Nord",i:"Linen wrap blouse",s:"34, 36, 38, 40"}); render(); break;
+    case "fillBasic": Object.assign(S.profile,{name:"Lisen",gender:"Woman",age:"36",height:"168",weight:"62"}); render(); break;
+    case "back": { const to=el.dataset.to; if(S.returnTo && to===S.returnTo) S.returnTo=null; if(active) active.backs=(active.backs||0)+1; log(`back to ${to}`); go(to); break; }
+    case "basicDone": S.steps.basic=true; emit("required screens done"); go("ready"); break;
+    case "go": if(el.dataset.to==="profile") S.returnTo=null; go(el.dataset.to); break;
+    case "skip": {
+      if(S.returnTo){ const r=S.returnTo; S.returnTo=null; go(r); break; }
+      const n=+el.dataset.n; emit(`skipped screen ${n}`);
+      if(n>=6) finishSetup(); else go(["","","","meas","questions","history"][n]);
+      break; }
+    case "scan": S.scanState="scanning"; render(); setTimeout(()=>{ if(S.screen==="scan"){ S.scanState="done"; render(); } },1800); break;
+    case "scanDone": S.steps.scan=true; S.scanFrom=true; Object.assign(S.profile,{waist:S.profile.waist||"77",hips:S.profile.hips||"97",inseam:S.profile.inseam||"79"}); next("meas"); break;
+    case "measDone": if(["waist","hips","chest","inseam"].some(k=>S.profile[k])) S.steps.meas=true; next("questions"); break;
+    case "pick": S.profile[el.dataset.k]=v; render();
+      if(el.dataset.k==="shape"){ const c=$(`.hrow [data-v="${v}"]`); if(c){ autoScroll(); c.scrollIntoView({block:"nearest",inline:"nearest",behavior:"smooth"}); } }
+      break;
+    case "enterApp": S.screen="main"; S.tab="wizard"; log("opened the app"); render(); break;
+    case "questionsDone": if(S.profile.shape||S.profile.athletic) S.steps.questions=true; next("history"); break;
+    case "outcome": S.hist.outcome=v; render(); break;
+    case "addHist": S.history.push({...S.hist}); S.hist={brand:"",model:"",size:"",outcome:"Kept"}; render(); break;
+    case "historyDone": S.steps.history=true; if(S.returnTo){ const r=S.returnTo; S.returnTo=null; go(r); } else finishSetup(); break;
+    case "addStep": S.returnTo="profile"; go(el.dataset.to); break;
+    case "tab": S.tab=v; S.screen="main"; render(); break;
+    case "backMain": S.screen="main"; render(); break;
+    case "method": S.method=v; S.tab="wizard"; go({share:"mShare",link:"mLink",screenshot:"mShot"}[v]); break;
+    case "pasteLink": S.linkText=ITEMS[id].url; S.linkId=id; render(); break;
+    case "checkLink": { ITEMS.boutique.source="link";
+      const known=SAMPLE_LINKS.find(l=>S.linkText.includes(ITEMS[l.id].url.split("/")[0]));
+      runProcessing(known?known.id:"boutique"); break; }
+    case "shot": runProcessing(id); break;
+    case "openExt": S.extId=id; go("ext"); break;
+    case "openShare": sheet(`<b class="h3">Share to</b><div class="share-row">
+        <button class="share-app"><i>Msg</i>Messages</button><button class="share-app us" data-a="shareUs"><i>S&amp;F</i>Size &amp; Fit</button>
+        <button class="share-app"><i>WA</i>WhatsApp</button><button class="share-app"><i>✉</i>Mail</button></div>
+        <button class="btn ghost" data-a="closeSheet">Cancel</button>`); break;
+    case "shareUs": sheet(""); runProcessing(S.extId); break;
+    case "closeSheet": sheet(""); break;
+    case "backErr": go("errFormat"); break;
+    case "recoverShot": go("recoverShot"); break;
+    case "recoverManual": go("recoverManual"); break;
+    case "shotBoutique": S.bypass=true; ITEMS.boutique.source="screenshot"; runProcessing("boutique"); break;
+    case "manualGo": S.bypass=true; runProcessing("boutique"); setTimeout(()=>{S.manual=true;},0); break;
+    case "pickConflict": S.conflictPick=v; runProcessing("hm"); break;
+    case "openResult": S.item=id; S.origin=null; S.tune=0; go("result"); break;
+    case "saveRoom": {
+      const it=ITEMS[S.item]; const zone=["jeans","chinos","skirt"].includes(it.type)?"lower":it.type==="jacket"?"outer":it.type==="sweater"?"mid":"inner";
+      if(!S.closet.some(c=>c.from===S.item)) S.closet.unshift({id:"n"+Date.now(),from:S.item,type:it.type,color:it.color,name:`${it.brand} ${it.model.split(" ")[0]}`,zone,brand:it.brand,size:matches(S.item)[0].s,paid:null});
+      toast("Saved to your Fitting Room"); break; }
+    case "toShop": toast(`Prototype: this would open ${ITEMS[S.item].shop} with size ${matches(S.item)[0].s} selected`); break;
+    case "filter": S.filter=v; render(); break;
+    case "wear": { const c=S.closet.find(x=>x.id===id); S.outfit[c.zone]=S.outfit[c.zone]===id?null:id; render(); break; }
+    case "saveOutfit": {
+      const o=S.outfit; const hasTop=o.inner||o.mid||o.outer; if(!hasTop||!o.lower){ toast("Add a top and a bottom first"); break; }
+      toast("Outfit saved. Looking good!"); emit("outfit_saved"); break; }
+    case "itemMenu": { const c=S.closet.find(x=>x.id===id); const est=c.paid?Math.round(c.paid*.35/10)*10:null;
+      sheet(`<div class="row"><span class="item-img" style="flex-basis:64px;height:64px">${garm(c.type,c.color)}</span><div><b class="h3">${esc(c.name)}</b><p class="sub" style="font-size:13px">${esc(c.brand)} · size ${esc(c.size)} · ${({inner:"inner layer",mid:"mid layer",outer:"jacket",lower:"lower body"})[c.zone]}</p></div></div>
+        <div class="card col" style="gap:6px"><span class="eyebrow">Sell it in one tap</span>${est?`<p style="font-size:14px">You paid <b class="mono">${c.paid} kr</b>. Similar items sell for about <b class="mono">${est} kr</b>.</p>`:`<p class="sub" style="font-size:14px">Add what you paid to get a price estimate.</p>`}
+        <p class="sub" style="font-size:13px">Brand, size, material and photos are filled in for you.</p></div>
+        <div class="grid2"><button class="btn" data-a="sell" data-v="Sellpy">Sellpy</button><button class="btn" data-a="sell" data-v="Vinted">Vinted</button></div>
+        <button class="btn ghost" data-a="sell" data-v="Tradera">Tradera</button>`); break; }
+    case "sell": sheet(""); toast(`Prototype: listing drafted for ${v}`); break;
+    case "addItem": sheet(`<b class="h3">New item</b><div class="row"><span class="item-img" style="flex-basis:64px;height:64px">${garm("jacket","#3F5B4A")}</span><div><p style="font-size:14px">This looks like a <b>jacket</b>, so it goes under <b>outer layer</b>.</p><p class="sub" style="font-size:13px">Sorted by AI from your photo.</p></div></div>
+        <div class="grid2"><button class="btn accent" data-a="confirmAdd">That's right</button><button class="btn ghost" data-a="closeSheet">Change</button></div>`); break;
+    case "confirmAdd": S.closet.unshift({id:"n"+Date.now(),type:"jacket",color:"#3F5B4A",name:"Green jacket",zone:"outer",brand:"Unknown",size:"M",paid:null}); sheet(""); toast("Added to Jackets"); render(); break;
+    case "openLook": S.look=id; go("look"); break;
+    case "backLook": go("look"); break;
+    case "lookSize": S.origin="styles"; S.item=id; S.tune=0; go("result"); emit(`result:${id}`); break;
+    case "noData": toast("Not enough data on this item yet: try Size Wizard with its link"); break;
+  }
+});
+// setup ends on the all set milestone. T1 stops here, when the last setup screen is done, as in earlier rounds, so times compare.
+function finishSetup(){ S.onboarded=true; emit("onboard_done"); go("allset"); }
+function next(s){ if(S.returnTo){ const r=S.returnTo; S.returnTo=null; go(r); } else go(s); }
+
+phone.addEventListener("input",e=>{
+  if(e.target.id==="fb-text"){ S.prefs.fbText=e.target.value; return; }
+  if(e.target.dataset.m){ S.man[e.target.dataset.m]=e.target.value; const b=$("#manBtn"); if(b) b.disabled=!manualOk(); return; }
+  const f=e.target.dataset.f, h=e.target.dataset.h;
+  if(f==="link"){ S.linkText=e.target.value; const b=$("#checkBtn"); if(b) b.disabled=!S.linkText; return; }
+  if(f){ S.profile[f]=e.target.value; const b=$("#basicBtn"); if(b) b.disabled=!basicOk(S.profile); return; }
+  if(e.target.id==="tune"){ S.tune=+e.target.value; const list=matches(S.item);
+    $("#sizes").innerHTML=sizesHTML(list); $("#tuneLab").textContent=TUNE[S.tune+2]; $("#whyHead").textContent="Why "+list[0].s;
+    const r=(S.recent||[]).find(x=>x.id===S.item); if(r){ r.size=list[0].s; r.pc=list[0].pc; } }
+});
+phone.addEventListener("change",e=>{
+  const h=e.target.dataset.h; if(!h) return;
+  S.hist[h]=e.target.value;
+  if(h==="brand"){ S.hist.model=""; S.hist.size=""; } if(h==="model") S.hist.size="";
+  render();
+});
+phone.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ") && e.target.matches('.garm[role="button"]')){ e.preventDefault(); e.target.click(); } });
+document.addEventListener("keydown",e=>{ if(e.key!=="Escape") return;
+  if($("#sheet").innerHTML){ sheet(""); } else if(S.menuOpen){ S.menuOpen=false; render(); const b=$(".menu-btn"); if(b) b.focus(); } });
+
+phone.addEventListener("scroll",syncRails,true);
+// swipe rows have no scroll bar: swipe on a phone, drag with the mouse on a computer
+phone.addEventListener("scroll",e=>{ const r=e.target; if(!r.classList || !r.classList.contains("hrow") || performance.now()<autoUntil) return;
+  if(!S.swiped){ S.swiped=true; const h=$(".swipe-hint"); if(h) h.classList.add("gone"); log("body shapes swiped"); }
+  if(active) active.swiped=true; },true);
+let drag=null, dragEnd=0;
+phone.addEventListener("pointerdown",e=>{ const r=e.target.closest(".hrow"); if(r && e.pointerType==="mouse" && e.button===0) drag={r,x:e.clientX,s:r.scrollLeft,moved:false}; });
+addEventListener("pointermove",e=>{ if(!drag) return; const dx=e.clientX-drag.x;
+  if(!drag.moved && Math.abs(dx)>5){ drag.moved=true; drag.r.classList.add("free"); }
+  if(drag.moved) drag.r.scrollLeft=drag.s-dx; });
+addEventListener("pointerup",()=>{ if(!drag) return; const {r,moved}=drag; drag=null; if(!moved) return;
+  dragEnd=performance.now(); // settle on the nearest card
+  const max=r.scrollWidth-r.clientWidth, xs=[...r.children].map(c=>Math.min(max,c.offsetLeft-20));
+  r.scrollTo({left:xs.reduce((a,b)=>Math.abs(b-r.scrollLeft)<Math.abs(a-r.scrollLeft)?b:a,0),behavior:"smooth"});
+  setTimeout(()=>r.classList.remove("free"),450); });
+addEventListener("pointercancel",()=>{ if(drag){ drag.r.classList.remove("free"); drag=null; } });
+phone.addEventListener("click",e=>{ if(performance.now()-dragEnd<350 && e.target.closest(".hrow")){ e.stopPropagation(); e.preventDefault(); } },true);
+addEventListener("resize",syncRails);
+if(document.fonts) document.fonts.ready.then(syncRails);
+render(); renderTasks(); renderResults(); log("prototype ready");
+})();
+</script>
+
+</body></html>
