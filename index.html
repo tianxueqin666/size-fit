@@ -387,7 +387,7 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
   .drawer .phead{padding-top:16px}
   .notebook{padding:28px 16px 24px}
   .nb-head .h1{font-size:30px}
-  /* phones: only the app shows and the page can't scroll; add #guide to the link to show the test guide below it */
+  /* phones: only the app shows and the page can't scroll; add #guide to the link to show the notes below it */
   html:not(.show-guide) .notebook{display:none}
   html:not(.show-guide),html:not(.show-guide) body{height:100%;overflow:hidden;overscroll-behavior:none}
   /* 16px stops iPhone Safari from zooming in when a field is tapped */
@@ -444,30 +444,12 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
     </div>
   </div>
 
-  <section class="notebook" aria-label="Test guide">
+  <section class="notebook" aria-label="About this prototype">
     <div class="nb-head">
       <span class="eyebrow">Group 3 · Agile Making &amp; Prototyping</span>
       <h1 class="h1">Size &amp; Fit App</h1>
       <span class="ver">Mid-fidelity prototype · v4, from 4 Nov · built from the concept brief and user flows</span>
       <p class="sub">Tap through the phone above. Flow 1 (first app usage) starts on the log-in screen; Flow 2 (Size Wizard) is the first tab. After setup, the menu button at the top right opens the profile and settings. Nothing is sent anywhere, and the camera is never used.</p>
-    </div>
-
-    <div class="nb-sec">
-      <h2>Test tasks</h2>
-      <p class="sub">Start a task and the page scrolls up to the phone. Hand it over, and the timer and tap count run until the task is done. Then come back here to rate it. Each goal is the measurable outcome the group is testing against.</p>
-      <div id="tasks" class="task-grid"></div>
-    </div>
-
-    <div class="nb-sec">
-      <h2>Results</h2>
-      <div class="res-wrap"><table id="results"><thead><tr><th>Task</th><th>Variant</th><th>Time</th><th>Taps</th><th>Rating</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
-      <div class="row" style="flex-wrap:wrap">
-        <button class="btn small" id="copyRes">Copy results</button>
-        <button class="btn small ghost" id="clearRes">Clear results</button>
-        <button class="btn small ghost" id="resetProto">Reset prototype</button>
-      </div>
-      <p class="sub" style="font-size:13px">Results stay in this browser only. Copy them into the group's sheet or FigJam after each session.</p>
-      <div class="log" id="log" aria-label="Event log"></div>
     </div>
 
     <div class="nb-sec">
@@ -479,6 +461,8 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
             <li>The AI scan screen has one main button, "Take picture", in the same pink and size as the main buttons on the other screens. "Import one" is gone.</li>
             <li>On the Size Wizard home, each of the three options (Share from another app, Paste a link, Upload screenshots) opens its own page, instead of a panel further down the same page. The example boxes on those pages have bigger text and more space above and below it.</li>
             <li>A size result shows only the best match. The second and third sizes are gone, so the H&amp;M mixed-signals screen no longer offers "Show me both".</li>
+            <li>For the final presentation, the test tasks, the results table and the event log are gone from this page, since testing is done. Reloading the page starts the prototype over.</li>
+            <li>On a phone, the prototype drops the phone frame and fills the whole screen, so it feels like a real app, and the page no longer moves or zooms while users fill in the fields. These notes show on a phone only when the link ends in #guide.</li>
           </ul></li>
         <li><b>v3, 2 to 4 Nov.</b>
           <ul style="margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
@@ -515,7 +499,7 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
         <li><b>Both Flow 2 backlog items are in.</b> The result shows the best size with its match percentage, and a slider fine-tunes it for a looser or tighter fit than the item's own.</li>
         <li><b>The tape measure is the profile.</b> Every optional onboarding screen visibly lengthens it, and a short tape lowers the top match percentage, so skipping has a cost the user can see.</li>
         <li><b>The menu holds the profile and settings.</b> Connecting Zalando imports three sample orders into the purchase history and lengthens the tape. Connecting Atelier Nord, the small boutique, shows the "format can't be read" case, the import-format risk in the concept brief. Your photo is set up under personal details, since the brief puts it under user info in settings. Sizes and units, notifications and language only save the choice for now.</li>
-        <li><b>Fitting Room and Styles are coming soon.</b> Both tabs show their page blurred, with a swinging hanger and "Coming soon" on top. The user flows only cover Flow 1 and Flow 2, so the tasks test those.</li>
+        <li><b>Fitting Room and Styles are coming soon.</b> Both tabs show their page blurred, with a swinging hanger and "Coming soon" on top. The user flows only cover Flow 1 and Flow 2, so the prototype focuses on those.</li>
       </ul>
     </div>
   </section>
@@ -525,7 +509,7 @@ td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 (() => {
 "use strict";
 const $ = (s, r = document) => r.querySelector(s);
-// the test guide shows on phones only when the link ends in #guide
+// on phones the notes below the app show only when the link ends in #guide
 const guideMode = () => document.documentElement.classList.toggle("show-guide", location.hash==="#guide");
 guideMode(); addEventListener("hashchange", guideMode);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -651,7 +635,7 @@ const logLines = [];
 function log(msg){
   const t = new Date().toTimeString().slice(0,8);
   logLines.unshift(`${t}  ${msg}`); if (logLines.length>40) logLines.pop();
-  $("#log").innerHTML = logLines.map(l=>`<span>${esc(l)}</span>`).join("");
+  const logEl = $("#log"); if (logEl) logEl.innerHTML = logLines.map(l=>`<span>${esc(l)}</span>`).join("");
 }
 function emit(ev){
   log(ev);
@@ -687,6 +671,7 @@ function startTask(id){
 
 function renderTasks(){
   const done = new Set(results.map(r=>r.task));
+  if (!$("#tasks")) return;
   $("#tasks").innerHTML = TASKS.map(t=>{
     const isActive = active && active.id===t.id;
     const rate = pendingRate && pendingRate.task===t.id;
@@ -703,24 +688,25 @@ function renderTasks(){
 setInterval(()=>{ if(active){ const el=$("#liveT"); if(el) el.textContent=((performance.now()-active.t0)/1000).toFixed(1)+" s"; } },200);
 
 function renderResults(){
+  if (!$("#results tbody")) return;
   $("#results tbody").innerHTML = results.length ? results.map(r=>`<tr><td>${r.task}</td><td>${r.variant}</td><td class="num">${r.time.toFixed(1)} s</td><td class="num">${r.taps}</td><td class="num">${r.rating??"–"}</td><td>${esc(r.notes||"")}</td></tr>`).join("")
     : `<tr><td colspan="6" style="color:var(--muted)">No sessions yet. Start a task above.</td></tr>`;
 }
 
-$("#tasks").addEventListener("click",e=>{
+if ($("#tasks")) $("#tasks").addEventListener("click",e=>{
   const s=e.target.closest("[data-start]"), st=e.target.closest("[data-stop]"), r=e.target.closest("[data-rate]");
   if(s) startTask(s.dataset.start);
   if(st){ log(`stopped ${st.dataset.stop} (not finished)`); results.push({task:st.dataset.stop,variant,time:(performance.now()-active.t0)/1000,taps:active.taps,rating:null,notes:"gave up / stopped"}); active=null; saveResults(); renderResults(); renderTasks(); }
   if(r && pendingRate){ pendingRate.rating=+r.dataset.rate; results.push(pendingRate); pendingRate=null; saveResults(); renderResults(); renderTasks(); }
 });
-$("#copyRes").onclick=async()=>{
+if ($("#copyRes")) $("#copyRes").onclick=async()=>{
   const txt = ["Task\tVariant\tTime (s)\tTaps\tRating\tNotes",...results.map(r=>`${r.task}\t${r.variant}\t${r.time.toFixed(1)}\t${r.taps}\t${r.rating??""}\t${r.notes||""}`)].join("\n");
   try{ await navigator.clipboard.writeText(txt); $("#copyRes").textContent="Copied"; }
   catch(e){ const sel=window.getSelection(); const rng=document.createRange(); rng.selectNodeContents($("#results")); sel.removeAllRanges(); sel.addRange(rng); $("#copyRes").textContent="Selected, press copy"; }
   setTimeout(()=>$("#copyRes").textContent="Copy results",1800);
 };
-$("#clearRes").onclick=()=>{ results=[]; saveResults(); renderResults(); renderTasks(); };
-$("#resetProto").onclick=()=>{ S=fresh(); active=null; pendingRate=null; log("prototype reset"); render(); renderTasks(); };
+if ($("#clearRes")) $("#clearRes").onclick=()=>{ results=[]; saveResults(); renderResults(); renderTasks(); };
+if ($("#resetProto")) $("#resetProto").onclick=()=>{ S=fresh(); active=null; pendingRate=null; log("prototype reset"); render(); renderTasks(); };
 
 /* ---------- shared bits ---------- */
 function tape(){
